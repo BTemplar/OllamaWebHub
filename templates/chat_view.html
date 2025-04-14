@@ -1,0 +1,14 @@
+<form method="post" action="">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <input type="text" name="user_message" placeholder="Введите сообщение">
+    <button type="submit">Отправить</button>
+</form>
+
+<ul>
+    {% for message in messages %}
+        <li>
+            <strong>{{ message.sender }}:</strong> {{ message.message }}
+        </li>
+    {% endfor %}
+</ul>
