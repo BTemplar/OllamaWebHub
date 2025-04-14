@@ -4,6 +4,9 @@ from .models import ChatBranch, ChatMessage
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, logout
 from django.forms import ModelForm, ChoiceField, NumberInput
+from .ollama_api import OllamaAPI
+from .forms import ChatViewForm
+import base64
 
 def chat_branch_list(request):
     branches = ChatBranch.objects.filter(user=request.user)
@@ -82,24 +85,44 @@ class ChatViewForm(ModelForm):
 
 @login_required
 def chat_view(request, pk):
-    branch = get_object_or_404(ChatBranch, pk=pk, user=request.user)
-    messages = ChatMessage.objects.filter(chat_branch=branch).order_by('timestamp')
+   branch = get_object_or_404(ChatBranch, pk=pk, user=request.user)
+   messages = ChatMessage.objects.filter(chat_branch=branch).order_by('timestamp')
 
-    if request.method == 'POST':
-        form = ChatViewForm(request.POST)
-        if form.is_valid():
-            user_message = form.data['user_message']
-            temperature = form.data['temperature']
-            model = form.data['model']
+   ollama_api = OllamaAPI()
 
-            # Отправляем сообщение в Ollama API с учетом температуры и модели
-            ollama_response = send_to_ollama(user_message, branch, temperature, model)
+   if request.method == 'POST':
+       form = ChatViewForm(request.POST, request.FILES)
+       if form.is_valid():
+           prompt = form.data['prompt']
+           temperature = form.data['temperature']
+           multimodal = form.data.get('multimodal', False)  # Получаем значение с учетом возможности отсутствия
+           image = form.files.get('image')
 
-            # Создаем ответ от Ollama
-            ChatMessage.objects.create(chat_branch=branch, sender='olllama', message=ollama_response)
+           if multimodal and image:
+               # Кодируем изображение в base64
+               image_base64 = base64.b64encode(image.read()).decode('utf-8')
+               images = [image_base64]
+               response = ollama_api.generate_multimodal_response(
+                   model_name="llava",  # Или другая мультимодальная модель
+                   prompt=prompt,
+                   images=images,
+                   temperature=temperature
+               )
+           else:
+               response = ollama_api.generate_response(
+                   model_name="llama2", # Или другая модель
+                   prompt=prompt,
+                   temperature=temperature
+               )
 
-            return redirect('chat_view', pk=pk)
-    else:
-        form = ChatViewForm()
-
-    return render(request, 'ollemma_app/chat_view.html', {'branch': branch, 'messages': messages, 'form': form})
+           ChatMessage.objects.create(
+               chat_branch=branch,
+               sender='user',
+               message=response
+           )
+           return redirect('chat_view', pk=pk)
+       else:
+           return render(request, 'ollemma_app/chat_view.html', {'branch': branch, 'messages': messages, 'form': form})
+   else:
+       form = ChatViewForm()
+       return render(request, 'ollemma_app/chat_view.html', {'branch': branch, 'messages': messages, 'form': form})
