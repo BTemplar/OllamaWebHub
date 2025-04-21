@@ -1,0 +1,32 @@
+{% extends "fullscreen-base.html" %}
+{% block content %}
+<h1 class="text-center">Register form</h1>
+<form method="post">
+    {% csrf_token %}
+
+    <div class="form-group">
+        <label for="id_username" class="form-control-label">Login:</label>
+        {{ form.username }}
+    </div>
+
+    <div class="form-group">
+        <label for="id_email" class="form-control-label">E-mail:</label>
+        {{ form.email }}
+    </div>
+
+    <div class="form-group">
+        <label for="id_password1" class="form-control-label">Password:</label>
+        {{ form.password1 }}
+    </div>
+
+    <div class="form-group">
+        <label for="id_password2" class="form-control-label">Confirm password:</label>
+        {{ form.password2 }}
+    </div>
+    <hr>
+    <div class="text-center">
+        <button type="submit" class="btn btn-primary btn-block mx-auto gradient-bg-btn">Sign Up</button>
+    </div>
+    <p class="mb-0 text-muted text-center">Do you already have an account?<br><a href="{% url 'login' %}" class="f-w-400">Sign In</a></p>
+</form>
+{% endblock %}

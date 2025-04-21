@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<style>
+    .chat-sidebar {
+        background: rgba(var(--bs-dark-rgb), 0.95);
+        min-height: 100vh;
+        border-right: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .chat-list {
+        max-height: calc(100vh - 150px);
+        overflow-y: auto;
+    }
+    
+    .active-chat {
+        background: rgba(var(--bs-primary-rgb), 0.2) !important;
+        border-left: 3px solid var(--bs-primary) !important;
+    }
+
+    .message-content {
+        max-width: 80%;
+        word-wrap: break-word;
+    }
+
+    .bot-message .message-content {
+        background: rgba(var(--bs-info-rgb), 0.1) !important;
+    }
+
+    .user-message .message-content {
+        background: rgba(var(--bs-success-rgb), 0.1) !important;
+    }
+    .message-wrapper {
+    max-width: 80%;
+    margin: 0 10px;
+    }
+    
+    .user-message {
+        margin-left: auto;
+    }
+    
+    .bot-message {
+        margin-right: auto;
+    }
+    
+    .user-message .message-content {
+        background: rgba(var(--bs-primary-rgb), 0.1);
+        border: 1px solid rgba(var(--bs-primary-rgb), 0.2);
+        border-radius: 15px 15px 0 15px;
+    }
+    
+    .bot-message .message-content {
+        background: rgba(var(--bs-secondary-rgb), 0.1);
+        border: 1px solid rgba(var(--bs-secondary-rgb), 0.2);
+        border-radius: 15px 15px 15px 0;
+    }
+    
+    /* Адаптивность для мобильных */
+    @media (max-width: 768px) {
+        .message-wrapper {
+            max-width: 90%;
+        }
+    }
+    @keyframes messageAppear {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    }
+    
+    .message-wrapper {
+        animation: messageAppear 0.3s ease-out;
+    }
+    
+    .chat-messages-container {
+    height: calc(100vh - 200px); /* Высота с учетом заголовка и формы */
+    scroll-behavior: smooth;
+    }
+    
+    /* Для мобильных устройств */
+    @media (max-width: 768px) {
+        .chat-messages-container {
+            height: calc(100vh - 160px);
+        }
+        
+        .message-wrapper {
+            max-width: 95%;
+            margin: 0 5px;
+        }
+    }
+    
+    /* Плавная прокрутка при новых сообщениях */
+    @keyframes smooth-scroll {
+        from { scroll-margin-bottom: 0; }
+        to { scroll-margin-bottom: 100px; }
+    }
+    
+    .chat-messages-container {
+        scroll-behavior: smooth;
+        scroll-padding-bottom: 20px;
+    }
+    
+    .message-wrapper:last-child {
+        scroll-margin-bottom: 50px;
+    }
+    .message-content {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid vh-100 d-flex flex-column">
+    <div class="row overflow-hidden glassmorphism d-flex flex-column bg-dark bg-opacity-25">
+        <!-- Боковая панель -->
+    <div class="chat-list-container col-md-3 p-3">
+        <div class="p-3 bg-dark glassmorphism">
+                <button class="btn btn-primary w-100 mb-3 gradient-bg-btn" data-bs-toggle="modal" data-bs-target="#newChatModal">
+                    <i class="bi-plus-circle"></i> New Chat
+                </button>
+                
+                <div class="chat-list">
+                    {% for branch in branches %}
+                    <a href="{% url 'chat_detail' branch.id %}" 
+                       class="d-block p-3 mb-2 text-decoration-none text-white rounded 
+                              {% if branch == selected_branch %}active-chat{% endif %}">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-0">{{ branch.name }}</h6>
+                                {% if branch.description %}
+                                <small class="text-muted">{{ branch.description|truncatechars:20 }}</small>
+                                {% endif %}
+                            </div>
+                            <span class="badge bg-primary rounded-pill">{{ branch.chatmessage_set.count }}</span>
+                        </div>
+                    </a>
+                    {% empty %}
+                    <div class="text-center text-muted py-3">
+                        No chats yet
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Основное окно -->
+        <div class="col-md-9 p-2 overflow-auto d-flex flex-column chat-container">
+            {% if selected_branch %}
+            <div class="d-flex flex-column h-100">
+                <!-- Заголовок чата -->
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3>{{ selected_branch.name }}</h3>
+                    <div class="dropdown">
+                        <button class="btn btn-link text-white" type="button" data-bs-toggle="dropdown">
+                            <i class="bi-three-dots-vertical"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#renameChatModal">
+                                <i class="bi-pencil"></i> Rename
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#deleteChatModal">
+                                <i class="bi-trash"></i> Delete
+                            </a></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- История сообщений -->
+                <div class="chat-messages-container flex-grow-1 overflow-auto mb-4" id="chat-messages">
+                    {% for msg in messages %}
+                    <div class="message-wrapper {% if msg.sender == 'user' %}user-message{% else %}bot-message{% endif %} mb-3">
+                        <div class="message-content p-3 rounded">
+                            <!-- Заголовок с отправителем -->
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <strong>
+                                    {% if msg.sender == 'user' %}
+                                    <i class="bi-person me-2"></i>Вы
+                                    {% else %}
+                                    <i class="bi-robot me-2"></i>Ассистент
+                                    {% endif %}
+                                </strong>
+                                <small class="text-muted">{{ msg.timestamp|time:"H:i" }}</small>
+                            </div>
+                            
+                            <!-- Текст сообщения -->
+                            <div class="message-text">
+                                {{ msg.message|linebreaks }}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Форма отправки -->
+            <div class="mt-auto">
+                <form method="POST" action="{% url 'chat_detail' selected_branch.id %}">
+                    {% csrf_token %}
+                    <div class="input-group">
+                        <textarea name="message" 
+                                 class="form-control" 
+                                 placeholder="Введите сообщение..."
+                                 rows="2"
+                                 required></textarea>
+                        <button type="submit" class="btn btn-primary gradient-bg-btn">
+                            <i class="bi-send"></i> Send
+                        </button>
+                    </div>
+                </form>
+            </div>
+            </div>
+            {% else %}
+            <!-- Экран приветствия -->
+            <div class="d-flex flex-column align-items-center justify-content-center h-100">
+                <div class="text-center py-5">
+                    <i class="bi-chat-dots display-1 text-muted mb-4"></i>
+                    <h2 class="mb-3">Welcome to Ollama WebHub</h2>
+                    <p class="lead text-muted">Select a chat from the sidebar or create a new one</p>
+                    <button class="btn btn-primary btn-lg mt-3 gradient-bg-btn" data-bs-toggle="modal" data-bs-target="#newChatModal">
+                        <i class="bi-plus-circle"></i> Start New Chat
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% include "chat/modals.html" %}
+{% endblock %}
+
+{% block extra_js %}
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const messagesContainer = document.querySelector('.chat-messages-container');
+        
+        function scrollToBottom() {
+            if(messagesContainer) {
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+        }
+        
+        // Первоначальная прокрутка
+        scrollToBottom();
+        
+        // Для динамического контента (если будете добавлять через AJAX)
+        const observer = new MutationObserver(scrollToBottom);
+        if(messagesContainer) {
+            observer.observe(messagesContainer, {
+                childList: true,
+                subtree: true
+            });
+        }
+    });
+    </script>
+{% endblock %}

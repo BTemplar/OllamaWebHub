@@ -1,0 +1,11 @@
+{% extends "fullscreen-base.html" %}
+{% block content %}
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <div class="text-center">
+        <button type="submit" class="btn btn-primary btn-block mx-auto gradient-bg-btn">Login</button>
+    </div>
+    <p class="mb-0 text-muted text-center">Don't have an account?<br><a href="{% url 'register' %}" class="f-w-400">Sign Up</a></p>
+</form>
+{% endblock %}
