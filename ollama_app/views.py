@@ -16,14 +16,14 @@ def create_chat(request):
         try:
             # Создаем чат
             new_branch = ChatBranch.objects.create(
-                name=request.POST.get('name', 'Новый чат'),
+                name=request.POST.get('name', 'New chat'),
                 user=request.user
             )
-            messages.success(request, 'Чат успешно создан!')
+            messages.success(request, 'Chat successfully created!')
             return redirect('chat_detail', branch_id=new_branch.id)
 
         except Exception as e:
-            messages.error(request, f'Ошибка: {str(e)}')
+            messages.error(request, f'Error: {str(e)}')
             return redirect('chat_home')
 
     return redirect('chat_home')
@@ -39,14 +39,14 @@ def chat_view(request, branch_id=None):
     try:
         if request.method == 'POST' and 'message' in request.POST:
             if not branch_id:
-                messages.error(request, "Чат не выбран")
+                messages.error(request, "Chat not selected")
                 return redirect('chat_home')
 
             selected_branch = get_object_or_404(ChatBranch, id=branch_id, user=user)
             message_text = request.POST.get('message', '').strip()
 
             if not message_text:
-                messages.warning(request, "Сообщение не может быть пустым")
+                messages.warning(request, "Message cannot be empty")
                 return redirect('chat_detail', branch_id=branch_id)
 
             # Сохраняем сообщение пользователя
@@ -75,24 +75,24 @@ def chat_view(request, branch_id=None):
                     ChatMessage.objects.create(
                         chat_branch=selected_branch,
                         sender='system',
-                        message='Упс.... что-то пошло не так... Попробуйте еще раз'
+                        message='Oops... something went wrong... try again'
                     )
 
             except ConnectionError as e:
-                logger.error(f"Ошибка подключения: {str(e)}")
+                logger.error(f"Connection error: {str(e)}")
                 # Создаем системное сообщение в чате
                 ChatMessage.objects.create(
                     chat_branch=selected_branch,
                     sender='system',
-                    message='Упс.... что-то пошло не так'
+                    message='Oops... something went wrong... try again'
                 )
 
             except Exception as e:
-                logger.error(f"Неизвестная ошибка: {str(e)}")
+                logger.error(f"Unknown error: {str(e)}")
                 ChatMessage.objects.create(
                     chat_branch=selected_branch,
                     sender='system',
-                    message='Упс.... что-то пошло не так'
+                    message='Oops... something went wrong... try again'
                 )
 
             return redirect('chat_detail', branch_id=branch_id)

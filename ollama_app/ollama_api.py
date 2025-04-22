@@ -12,7 +12,7 @@ class OllamaAPI:
             response.raise_for_status()
             return response.json()['version']
         except requests.exceptions.RequestException as e:
-            print(f"Ошибка при получении версии: {e}")
+            print(f"Error getting version: {e}")
             return None
 
     def pull_model(self, model_name, insecure=False, stream=False):
@@ -28,7 +28,7 @@ class OllamaAPI:
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
-            print(f"Ошибка при скачивании модели: {e}")
+            print(f"Error downloading model: {e}")
             return None
 
     def push_model(self, model_name, insecure=False, stream=False):
@@ -43,7 +43,7 @@ class OllamaAPI:
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
-            print(f"Ошибка при загрузке модели: {e}")
+            print(f"Error loading model: {e}")
             return None
 
     def create_model_from_safetensors(self, model_name, files):
@@ -54,7 +54,7 @@ class OllamaAPI:
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
-            print(f"Ошибка при создании модели: {e}")
+            print(f"Error creating model: {e}")
             return None
 
     def delete_model(self, model_name):
@@ -64,7 +64,7 @@ class OllamaAPI:
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
-            print(f"Ошибка при удалении модели: {e}")
+            print(f"Error deleting model: {e}")
             return None
 
     def list_models(self):
@@ -74,7 +74,7 @@ class OllamaAPI:
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
-            print(f"Ошибка при получении списка моделей: {e}")
+            print(f"Error getting list of models: {e}")
             return None
 
     def generate_response(self, model_name, prompt, temperature=0.7, top_p=0.95, top_k=40, repeat_penalty=1.1, stream=False):
@@ -86,6 +86,7 @@ class OllamaAPI:
             "top_p": top_p,
             "top_k": top_k,
             "repeat_penalty": repeat_penalty,
+            "stream": stream,
         }
         if stream:
             data["stream"] = True
@@ -95,7 +96,7 @@ class OllamaAPI:
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
-            print(f"Ошибка при генерации ответа: {e}")
+            print(f"Error generating response: {e}")
             return None
 
     def generate_multimodal_response(self, model_name, prompt, images=None, temperature=0.7):
@@ -126,5 +127,5 @@ class OllamaAPI:
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
-            print(f"Ошибка при генерации ответа: {e}")
+            print(f"Error generating response: {e}")
             return None

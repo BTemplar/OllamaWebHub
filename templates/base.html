@@ -34,6 +34,8 @@
             height: calc(100vh - 150px);
             overflow-y: auto;
             scroll-behavior: smooth;
+            border-radius: 0 0 15px 15px;
+            overflow: hidden;
         }
         
         @media (max-width: 768px) {
@@ -94,9 +96,12 @@
                 <ul class="navbar-nav">
                     {% if user.is_authenticated %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'logout' %}">
-                            <i class="bi-box-arrow-right"></i> Logout
-                        </a>
+                        <form action="{% url 'logout' %}" method="POST" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="nav-link btn btn-link">
+                                <i class="bi-box-arrow-right"></i> Logout
+                            </button>
+                        </form>
                     </li>
                     {% else %}
                     <li class="nav-item">

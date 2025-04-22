@@ -30,10 +30,6 @@
     .user-message .message-content {
         background: rgba(var(--bs-success-rgb), 0.1) !important;
     }
-    .message-wrapper {
-    max-width: 80%;
-    margin: 0 10px;
-    }
     
     .user-message {
         margin-left: auto;
@@ -74,6 +70,11 @@
     
     .message-wrapper {
         animation: messageAppear 0.3s ease-out;
+    }
+    
+    #messageInput:focus {
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    border-color: #86b7fe;
     }
     
     .chat-messages-container {
@@ -202,10 +203,12 @@
                     {% csrf_token %}
                     <div class="input-group">
                         <textarea name="message" 
-                                 class="form-control" 
-                                 placeholder="Введите сообщение..."
-                                 rows="2"
-                                 required></textarea>
+                                  id="messageInput"
+                                  class="form-control"
+                                  placeholder="Enter your message here..."
+                                  rows="2"
+                                  style="resize: none"
+                                  required></textarea>
                         <button type="submit" class="btn btn-primary gradient-bg-btn">
                             <i class="bi-send"></i> Send
                         </button>
@@ -235,26 +238,45 @@
 
 {% block extra_js %}
     <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const messagesContainer = document.querySelector('.chat-messages-container');
-        
-        function scrollToBottom() {
-            if(messagesContainer) {
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        document.addEventListener('DOMContentLoaded', function() {
+            const messagesContainer = document.querySelector('.chat-messages-container');
+            
+            function scrollToBottom() {
+                if(messagesContainer) {
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                }
             }
-        }
-        
-        // Первоначальная прокрутка
-        scrollToBottom();
-        
-        // Для динамического контента (если будете добавлять через AJAX)
-        const observer = new MutationObserver(scrollToBottom);
-        if(messagesContainer) {
-            observer.observe(messagesContainer, {
-                childList: true,
-                subtree: true
-            });
-        }
-    });
+            
+            // Первоначальная прокрутка
+            scrollToBottom();
+            
+            // Для динамического контента (если будете добавлять через AJAX)
+            const observer = new MutationObserver(scrollToBottom);
+            if(messagesContainer) {
+                observer.observe(messagesContainer, {
+                    childList: true,
+                    subtree: true
+                });
+            }
+        });
     </script>
+    <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const textarea = document.querySelector('textarea[name="message"]');
+                const form = document.querySelector('form');
+                
+                if (textarea && form) {
+                    textarea.addEventListener('keydown', function(e) {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            
+                            // Проверка на пустое сообщение
+                            if (this.value.trim().length > 0) {
+                                form.submit();
+                            }
+                        }
+                    });
+                }
+            });
+        </script>
 {% endblock %}
