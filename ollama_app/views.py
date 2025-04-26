@@ -6,6 +6,7 @@ from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseServerError
 from requests.exceptions import ConnectionError
+from django.utils import timezone
 import logging
 
 logger = logging.getLogger(__name__)
@@ -14,9 +15,10 @@ logger = logging.getLogger(__name__)
 def create_chat(request):
     if request.method == 'POST':
         try:
-            # Создаем чат
+            # Create a new chat branch
             new_branch = ChatBranch.objects.create(
                 name=request.POST.get('name', 'New chat'),
+                description=request.POST.get('description', None),
                 user=request.user
             )
             messages.success(request, 'Chat successfully created!')
@@ -31,6 +33,7 @@ def create_chat(request):
 
 @login_required
 def chat_view(request, branch_id=None):
+    today = timezone.now().date()
     user = request.user
     branches = ChatBranch.objects.filter(user=user)
     selected_branch = None
@@ -49,7 +52,7 @@ def chat_view(request, branch_id=None):
                 messages.warning(request, "Message cannot be empty")
                 return redirect('chat_detail', branch_id=branch_id)
 
-            # Сохраняем сообщение пользователя
+            # Save user's message
             ChatMessage.objects.create(
                 chat_branch=selected_branch,
                 sender='user',
@@ -57,7 +60,7 @@ def chat_view(request, branch_id=None):
             )
 
             try:
-                # Попытка получить ответ от Ollama
+                # Try to get response from Ollama
                 ollama = OllamaAPI()
                 response = ollama.generate_response(
                     model_name='llama2',
@@ -71,7 +74,7 @@ def chat_view(request, branch_id=None):
                         message=response['response']
                     )
                 else:
-                    # Создаем сообщение об ошибке в чате
+                    # Create error message in chat
                     ChatMessage.objects.create(
                         chat_branch=selected_branch,
                         sender='system',
@@ -80,7 +83,7 @@ def chat_view(request, branch_id=None):
 
             except ConnectionError as e:
                 logger.error(f"Connection error: {str(e)}")
-                # Создаем системное сообщение в чате
+                # Create system message in chat
                 ChatMessage.objects.create(
                     chat_branch=selected_branch,
                     sender='system',
@@ -105,12 +108,30 @@ def chat_view(request, branch_id=None):
             'branches': branches,
             'selected_branch': selected_branch,
             'messages': chat_messages,
+            'today': today,
         })
 
     except Exception as e:
         logger.exception(f"Critical error in chat_view: {e}")
         return HttpResponseServerError("Internal Server Error")
 
+
+@login_required
+def rename_chat(request, branch_id):
+    if request.method == 'POST':
+        chat_branch = get_object_or_404(ChatBranch, id=branch_id, user=request.user)
+        new_name = request.POST.get('new_name', '').strip()
+
+        if not new_name:
+            messages.error(request, "Название не может быть пустым")
+            return redirect('chat_detail', branch_id=branch_id)
+
+        chat_branch.name = new_name
+        chat_branch.save()
+        messages.success(request, "Чат успешно переименован")
+        return redirect('chat_detail', branch_id=branch_id)
+
+    return redirect('chat_home')
 
 @require_POST
 @login_required

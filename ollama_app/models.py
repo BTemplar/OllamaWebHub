@@ -11,7 +11,7 @@ class ChatBranch(models.Model):
 
 class ChatMessage(models.Model):
     chat_branch = models.ForeignKey(ChatBranch, on_delete=models.CASCADE)
-    sender = models.CharField(max_length=255)  # "user" или "ollama"
+    sender = models.CharField(max_length=255)
     message = models.TextField()
     timestamp = models.DateTimeField(auto_now_add=True)
 

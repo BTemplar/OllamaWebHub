@@ -2,15 +2,15 @@
 
 {% block extra_css %}
 <style>
-    .chat-sidebar {
-        background: rgba(var(--bs-dark-rgb), 0.95);
-        min-height: 100vh;
-        border-right: 1px solid rgba(255, 255, 255, 0.1);
-    }
+    {#.chat-sidebar {#}
+    {#    background: rgba(var(--bs-dark-rgb), 0.95);#}
+    {#    min-height: 100vh;#}
+    {#    border-right: 1px solid rgba(255, 255, 255, 0.1);#}
+    {#}#}
     
     .chat-list {
         max-height: calc(100vh - 150px);
-        overflow-y: auto;
+        overflow: hidden;
     }
     
     .active-chat {
@@ -19,7 +19,7 @@
     }
 
     .message-content {
-        max-width: 80%;
+        max-width: 100%;
         word-wrap: break-word;
     }
 
@@ -33,16 +33,25 @@
     
     .user-message {
         margin-left: auto;
+        margin-right: 20px;
+        max-width: 70%;
+        border-radius: 15px 0 15px 15px;
     }
     
     .bot-message {
         margin-right: auto;
+        margin-left: 20px;
+        max-width: 70%;
+        border-radius: 0 15px 15px 15px;
     }
     
-    .user-message .message-content {
-        background: rgba(var(--bs-primary-rgb), 0.1);
-        border: 1px solid rgba(var(--bs-primary-rgb), 0.2);
-        border-radius: 15px 15px 0 15px;
+    /* Адаптивность для мобильных */
+    @media (max-width: 768px) {
+        .user-message, .bot-message {
+            max-width: 85%;
+            margin-left: 10px;
+            margin-right: 10px;
+        }
     }
     
     .bot-message .message-content {
@@ -69,17 +78,12 @@
     }
     
     .message-wrapper {
-        animation: messageAppear 0.3s ease-out;
+        transition: transform 0.3s ease-out;
     }
     
     #messageInput:focus {
     box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
     border-color: #86b7fe;
-    }
-    
-    .chat-messages-container {
-    height: calc(100vh - 200px); /* Высота с учетом заголовка и формы */
-    scroll-behavior: smooth;
     }
     
     /* Для мобильных устройств */
@@ -101,12 +105,12 @@
     }
     
     .chat-messages-container {
-        scroll-behavior: smooth;
-        scroll-padding-bottom: 20px;
+        overscroll-behavior: contain;
+        padding-bottom: 20px; /* Воздух внизу */
     }
     
     .message-wrapper:last-child {
-        scroll-margin-bottom: 50px;
+        margin-bottom: 20px; /* Отступ для последнего сообщения */
     }
     .message-content {
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
@@ -118,13 +122,13 @@
 <div class="container-fluid vh-100 d-flex flex-column">
     <div class="row overflow-hidden glassmorphism d-flex flex-column bg-dark bg-opacity-25">
         <!-- Боковая панель -->
-    <div class="chat-list-container col-md-3 p-3">
+    <div class="chat-list overflow-auto col-md-3 p-3">
         <div class="p-3 bg-dark glassmorphism">
                 <button class="btn btn-primary w-100 mb-3 gradient-bg-btn" data-bs-toggle="modal" data-bs-target="#newChatModal">
                     <i class="bi-plus-circle"></i> New Chat
                 </button>
                 
-                <div class="chat-list">
+                <div>
                     {% for branch in branches %}
                     <a href="{% url 'chat_detail' branch.id %}" 
                        class="d-block p-3 mb-2 text-decoration-none text-white rounded 
@@ -148,13 +152,16 @@
             </div>
         </div>
 
-        <!-- Основное окно -->
+        <!-- Main -->
         <div class="col-md-9 p-2 overflow-auto d-flex flex-column chat-container">
             {% if selected_branch %}
             <div class="d-flex flex-column h-100">
-                <!-- Заголовок чата -->
+                <!-- Chat header -->
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h3>{{ selected_branch.name }}</h3>
+                    {% if selected_branch.description != None%}
+                        <h4 class="text-muted">{{ selected_branch.description }}</h4>
+                    {% endif %}
                     <div class="dropdown">
                         <button class="btn btn-link text-white" type="button" data-bs-toggle="dropdown">
                             <i class="bi-three-dots-vertical"></i>
@@ -171,7 +178,7 @@
                     </div>
                 </div>
 
-                <!-- История сообщений -->
+                <!-- Messages -->
                 <div class="chat-messages-container flex-grow-1 overflow-auto mb-4" id="chat-messages">
                     {% for msg in messages %}
                     <div class="message-wrapper {% if msg.sender == 'user' %}user-message{% else %}bot-message{% endif %} mb-3">
@@ -180,15 +187,19 @@
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <strong>
                                     {% if msg.sender == 'user' %}
-                                    <i class="bi-person me-2"></i>Вы
+                                    <i class="bi-person me-2"></i>{{ request.user.username }}
                                     {% else %}
-                                    <i class="bi-robot me-2"></i>Ассистент
+                                    <i class="bi-robot me-2"></i>Assistant
                                     {% endif %}
                                 </strong>
-                                <small class="text-muted">{{ msg.timestamp|time:"H:i" }}</small>
+                                {% if msg.timestamp.date == today %}
+                                    <small class="text-muted">today {{ msg.timestamp|time:"H:i" }}</small>
+                                {% else %}
+                                    <small class="text-muted">{{ msg.timestamp|date:"d.m.Y H:i" }}</small>
+                                {% endif %}
                             </div>
                             
-                            <!-- Текст сообщения -->
+                            <!-- Message text -->
                             <div class="message-text">
                                 {{ msg.message|linebreaks }}
                             </div>
@@ -197,13 +208,13 @@
                     {% endfor %}
                 </div>
 
-                <!-- Форма отправки -->
+                <!-- Send message form -->
             <div class="mt-auto">
-                <form method="POST" action="{% url 'chat_detail' selected_branch.id %}">
+                <form id="message-form" method="POST" action="{% url 'chat_detail' selected_branch.id %}">
                     {% csrf_token %}
                     <div class="input-group">
                         <textarea name="message" 
-                                  id="messageInput"
+                                  id="message-form"
                                   class="form-control"
                                   placeholder="Enter your message here..."
                                   rows="2"
@@ -217,7 +228,7 @@
             </div>
             </div>
             {% else %}
-            <!-- Экран приветствия -->
+            <!-- Main screen -->
             <div class="d-flex flex-column align-items-center justify-content-center h-100">
                 <div class="text-center py-5">
                     <i class="bi-chat-dots display-1 text-muted mb-4"></i>
@@ -238,45 +249,98 @@
 
 {% block extra_js %}
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const messagesContainer = document.querySelector('.chat-messages-container');
+    document.addEventListener('DOMContentLoaded', function() {
+        const messagesContainer = document.querySelector('.chat-messages-container');
+        const chatContainer = document.querySelector('.chat-list');
+        const textarea = document.querySelector('textarea[name="message"]');
+        const form = document.querySelector('#message-form');
+        const submitButton = form.querySelector('button[type="submit"]');
+    
+        function setLoadingState(isLoading) {
+            textarea.disabled = isLoading;
+            submitButton.disabled = isLoading;
+            submitButton.innerHTML = isLoading 
+                ? '<div class="spinner-border spinner-border-sm" role="status"></div> Sending...'
+                : '<i class="bi-send"></i> Send';
+        }
+    
+        async function handleSubmit(e) {
+            e.preventDefault();
             
-            function scrollToBottom() {
-                if(messagesContainer) {
-                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                }
-            }
+            const formData = new FormData(form);
+            const message = formData.get('message').trim();
             
-            // Первоначальная прокрутка
-            scrollToBottom();
-            
-            // Для динамического контента (если будете добавлять через AJAX)
-            const observer = new MutationObserver(scrollToBottom);
-            if(messagesContainer) {
-                observer.observe(messagesContainer, {
-                    childList: true,
-                    subtree: true
+            if (!message) return;
+    
+            setLoadingState(true);
+    
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': form.querySelector('[name=csrfmiddlewaretoken]').value,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: formData
                 });
-            }
-        });
-    </script>
-    <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                const textarea = document.querySelector('textarea[name="message"]');
-                const form = document.querySelector('form');
+    
+                if (!response.ok) throw new Error('Network error');
                 
-                if (textarea && form) {
-                    textarea.addEventListener('keydown', function(e) {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            
-                            // Проверка на пустое сообщение
-                            if (this.value.trim().length > 0) {
-                                form.submit();
-                            }
-                        }
-                    });
+                const data = await response.json();
+                
+                if (data.user_message) {
+                    addMessageToChat(data.user_message);
+                }
+                if (data.bot_message) {
+                    addMessageToChat(data.bot_message);
+                }
+    
+                textarea.value = '';
+                scrollToLatestMessage();
+    
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error sending message.\nOllama not responding.\nPlease, try again later.');
+                location.reload();
+            } finally {
+                setLoadingState(false);
+            }
+        }
+    
+        function addMessageToChat(message) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message-wrapper ${message.sender}-message mb-3`;
+            messageDiv.innerHTML = `
+                <div class="message-content p-3 rounded">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <strong>${message.sender === 'user' ? '<i class="bi-person me-2"></i>You' : '<i class="bi-robot me-2"></i>Assistant'}</strong>
+                        <small class="text-muted">${new Date(message.timestamp).toLocaleTimeString()}</small>
+                    </div>
+                    <div class="message-text">${message.text}</div>
+                </div>
+            `;
+            messagesContainer.appendChild(messageDiv);
+        }
+        function scrollToBottom() {
+            if(messagesContainer) {
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            } else {
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+        }
+        
+        scrollToBottom();
+        
+        if (form) {
+            form.addEventListener('submit', handleSubmit);
+            
+            textarea.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSubmit(e);
                 }
             });
-        </script>
+        }
+    });
+    </script>
 {% endblock %}
