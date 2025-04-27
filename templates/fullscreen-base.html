@@ -53,31 +53,19 @@
 </head>
 <body class="gradient-bg d-flex flex-column">
     <div class="container-fluid d-flex flex-column justify-content-center align-items-center flex-grow-1">
-        <!-- Логотип -->
+        <!-- Logo -->
         <div class="auth-logo glassmorphism">
             <i class="bi-robot fs-1 text-white"></i>
         </div>
 
-        <!-- Сообщения -->
-        {% if messages %}
-        <div class="w-100 mb-4" style="max-width: 400px;">
-            {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-            {% endfor %}
-        </div>
-        {% endif %}
-
-        <!-- Основной контент -->
+        <!-- Main content -->
         <div class="auth-card p-4">
             {% block content %}
             {% endblock %}
         </div>
     </div>
 
-    <!-- Футер -->
+    <!-- Footer -->
     <footer class="text-center py-3 mt-auto">
         <div class="container">
             <span class="text-muted small">

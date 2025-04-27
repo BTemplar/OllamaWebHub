@@ -11,6 +11,10 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+models = dict(OllamaAPI().list_models()).get('models')
+AVAILABLE_MODELS = [model['name'] for model in models] if models is not None else []
+OLLAMA_VERSION = f"Ollama version: {OllamaAPI().get_version()}" if OllamaAPI().get_version() is not None else "Not available"
+
 @login_required
 def create_chat(request):
     if request.method == 'POST':
@@ -19,6 +23,7 @@ def create_chat(request):
             new_branch = ChatBranch.objects.create(
                 name=request.POST.get('name', 'New chat'),
                 description=request.POST.get('description', None),
+                selected_model=request.POST.get('model', 'llama3'),
                 user=request.user
             )
             messages.success(request, 'Chat successfully created!')
@@ -38,7 +43,6 @@ def chat_view(request, branch_id=None):
     branches = ChatBranch.objects.filter(user=user)
     selected_branch = None
     chat_messages = []
-
     try:
         if request.method == 'POST' and 'message' in request.POST:
             if not branch_id:
@@ -59,19 +63,33 @@ def chat_view(request, branch_id=None):
                 message=message_text
             )
 
+            # Get the entire message history of the thread
+            chat_history = ChatMessage.objects.filter(
+                chat_branch=selected_branch
+            ).order_by('timestamp')
+
+            # Transform ChatMessage objects to a list of dictionaries for Ollama API
+            for msg in chat_history:
+                role = "assistant" if msg.sender == "assistant" else msg.sender
+                chat_messages.append({
+                    "role": role,
+                    "content": msg.message
+                })
+
             try:
-                # Try to get response from Ollama
-                ollama = OllamaAPI()
-                response = ollama.generate_response(
-                    model_name='llama2',
-                    prompt=message_text
+                # Use chat_response method instead generate_response
+                response = OllamaAPI().chat_response(
+                    model_name=selected_branch.selected_model,
+                    messages=chat_messages,
+                    stream=False  # if True, also get stream of tokens
                 )
 
-                if response and 'response' in response:
+                # Обработка ответа
+                if response and 'message' in response:
                     ChatMessage.objects.create(
                         chat_branch=selected_branch,
-                        sender='ollama',
-                        message=response['response']
+                        sender='assistant',
+                        message=response['message']['content']
                     )
                 else:
                     # Create error message in chat
@@ -109,6 +127,8 @@ def chat_view(request, branch_id=None):
             'selected_branch': selected_branch,
             'messages': chat_messages,
             'today': today,
+            'models': AVAILABLE_MODELS,
+            'ollama_version': OLLAMA_VERSION
         })
 
     except Exception as e:

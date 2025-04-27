@@ -2,11 +2,6 @@
 
 {% block extra_css %}
 <style>
-    {#.chat-sidebar {#}
-    {#    background: rgba(var(--bs-dark-rgb), 0.95);#}
-    {#    min-height: 100vh;#}
-    {#    border-right: 1px solid rgba(255, 255, 255, 0.1);#}
-    {#}#}
     
     .chat-list {
         max-height: calc(100vh - 150px);
@@ -124,7 +119,7 @@
         <!-- Боковая панель -->
     <div class="chat-list overflow-auto col-md-3 p-3">
         <div class="p-3 bg-dark glassmorphism">
-                <button class="btn btn-primary w-100 mb-3 gradient-bg-btn" data-bs-toggle="modal" data-bs-target="#newChatModal">
+                <button class="btn btn-primary w-100 mb-3 gradient-bg-btn" data-bs-toggle="modal" data-bs-target="#newChatModal" data-models= {{ models|safe }}>
                     <i class="bi-plus-circle"></i> New Chat
                 </button>
                 
@@ -187,7 +182,7 @@
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <strong>
                                     {% if msg.sender == 'user' %}
-                                    <i class="bi-person me-2"></i>{{ request.user.username }}
+                                    <i class="bi-person me-2"></i>{{ request.user.username|title }}
                                     {% else %}
                                     <i class="bi-robot me-2"></i>Assistant
                                     {% endif %}
@@ -298,12 +293,9 @@
                 textarea.value = '';
                 scrollToLatestMessage();
     
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Error sending message.\nOllama not responding.\nPlease, try again later.');
-                location.reload();
             } finally {
                 setLoadingState(false);
+                location.reload();
             }
         }
     

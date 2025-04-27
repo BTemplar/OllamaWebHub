@@ -10,18 +10,29 @@
         </div>
         <div class="modal-body">
           <div class="mb-3">
+          <label class="form-label">Chat label</label>
             <input type="text" 
                    name="name" 
                    class="form-control" 
                    required
-                   placeholder="Chat label">
+                   placeholder="Enter chat label">
           </div>
-          <div class="mb-3">  
+          <div class="mb-3">
+          <label class="form-label">Chat discription</label>    
               <input type="text" 
                      name="description" 
                      class="form-control"
-                     placeholder="Description">
-          </div>  
+                     placeholder="Enter chat discription">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Select model</label>
+            <select name="model" class="form-select" required>
+              <option value="" disabled selected>Choose a model...</option>
+              {% for model in models %}
+              <option value="{{ model }}">{{ model }}</option>
+              {% endfor %}
+            </select>
+          </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>

@@ -70,14 +70,14 @@ class OllamaAPI:
     def list_models(self):
         """Получает список доступных моделей."""
         try:
-            response = requests.get(f"{self.api_url}/models", timeout=10)
+            response = requests.get(f"{self.api_url}/tags", timeout=10)
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
             print(f"Error getting list of models: {e}")
             return None
 
-    def generate_response(self, model_name, prompt, temperature=0.7, top_p=0.95, top_k=40, repeat_penalty=1.1, stream=False):
+    def generate_response(self, model_name, prompt, temperature=0.7, top_p=0.95, top_k=40, repeat_penalty=1.1, stream=False, timeout=30):
         """Генерирует ответ от модели."""
         data = {
             "model": model_name,
@@ -92,7 +92,7 @@ class OllamaAPI:
             data["stream"] = True
 
         try:
-            response = requests.post(f"{self.api_url}/generate", json=data, timeout=10)
+            response = requests.post(f"{self.api_url}/generate", json=data, timeout=timeout)
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
@@ -128,4 +128,64 @@ class OllamaAPI:
             return response.json()
         except requests.exceptions.RequestException as e:
             print(f"Error generating response: {e}")
+            return None
+
+    def chat_response(self, model_name, messages, tools=None, format=None, temperature=0.7, top_p=0.95, top_k=40,
+             repeat_penalty=1.1, options=None, stream=False, keep_alive=None, timeout=30):
+        """Генерирует ответ в формате чата с возможностью потоковой передачи."""
+        # Формируем параметры модели, объединяя переданные значения и options
+        options_dict = {
+            "temperature": temperature,
+            "top_p": top_p,
+            "top_k": top_k,
+            "repeat_penalty": repeat_penalty,
+        }
+        if options:
+            options_dict.update(options)
+
+        # Основные данные запроса
+        data = {
+            "model": model_name,
+            "messages": messages,
+            "stream": stream,
+        }
+
+        # Добавляем опциональные параметры
+        if tools is not None:
+            data["tools"] = tools
+        if format is not None:
+            data["format"] = format
+        if keep_alive is not None:
+            data["keep_alive"] = keep_alive
+        if options_dict:
+            data["options"] = options_dict
+
+        try:
+            response = requests.post(
+                f"{self.api_url}/chat",
+                json=data,
+                timeout=timeout,
+                stream=stream  #
+            )
+            response.raise_for_status()
+
+            # Обработка потокового ответа
+            if stream:
+                def stream_generator():
+                    try:
+                        for line in response.iter_lines():
+                            if line:
+                                try:
+                                    yield json.loads(line)
+                                except json.JSONDecodeError as e:
+                                    print(f"Error decoding JSON: {e}")
+                    except requests.exceptions.RequestException as e:
+                        print(f"Error streaming: {e}")
+
+                return stream_generator()
+            else:
+                return response.json()
+
+        except requests.exceptions.RequestException as e:
+            print(f"Error generating chat response: {e}")
             return None
