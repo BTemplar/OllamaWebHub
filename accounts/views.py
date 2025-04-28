@@ -21,9 +21,9 @@ def login_view(request):
                 login(request, user)
                 return redirect("/")
             else:
-                msg = 'Введены неверные учетные данные'
+                msg = 'Incorrect credentials entered'
         else:
-            msg = 'Ошибка проверки формы'
+            msg = 'Form validation error'
 
     return render(request, "accounts/login.html", {"form": form, "msg": msg})
 
@@ -40,13 +40,13 @@ def register_user(request):
             raw_password = form.cleaned_data.get("password1")
             user = authenticate(username=username, password=raw_password)
 
-            msg = f'Пользователь создан <a href="/login/">{username}</a>.'
+            msg = f'User created <a href="/login/">{username}</a>.'
             success = True
 
             # return redirect("/login/")
 
         else:
-            msg = 'Форма недействительна'
+            msg = 'The form is invalid'
     else:
         form = SignUpForm()
 
