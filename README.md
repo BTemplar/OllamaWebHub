@@ -20,10 +20,10 @@ A web-based chat application built with Django, integrated with the Ollama API f
 
 ### Technologies
 
-- **Backend**: Django 4.x
+- **Backend**: Django 5.x
 - **AI API**: [Ollama](https://ollama.com/)
 - **Database**: SQLite (default; can be configured for PostgreSQL/MySQL)
-- **Frontend**: Django Templates
+- **Frontend**: Django Templates (Jinja)
 - **Dependencies**:
   - `requests` for API communication
   - `python-dotenv` for environment variables (recommended)
