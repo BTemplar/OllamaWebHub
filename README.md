@@ -1,8 +1,10 @@
-# Django Chat Application with Ollama Integration
+# Ollama WebHub
+
+## Django Chat Application with Ollama Integration
 
 A web-based chat application built with Django, integrated with the Ollama API for AI-powered responses. Users can create chat threads, interact with different AI models, and manage their chat history.
 
-## Features
+### Features
 
 - **User Authentication**: Secure login system for personalized chat experiences.
 - **Chat Management**:
@@ -16,24 +18,24 @@ A web-based chat application built with Django, integrated with the Ollama API f
 - **Message History**: Persistent storage of all user and AI messages.
 - **Ollama Status**: Display available models and Ollama server version.
 
-## Technologies
+### Technologies
 
 - **Backend**: Django 4.x
-- **AI API**: [Ollama](https://ollama.ai/)
+- **AI API**: [Ollama](https://ollama.com/)
 - **Database**: SQLite (default; can be configured for PostgreSQL/MySQL)
 - **Frontend**: Django Templates
 - **Dependencies**:
   - `requests` for API communication
   - `python-dotenv` for environment variables (recommended)
 
-## Installation
+### Installation
 
-### Prerequisites
+#### Prerequisites
 - Python 3.9+
 - Ollama server running locally (see [Ollama Setup](#ollama-setup))
 - Django 4.x
 
-### Steps
+#### Steps
 1. Clone the repository:
    ```bash
    git clone https://github.com/yourusername/django-ollama-chat.git
@@ -64,12 +66,12 @@ A web-based chat application built with Django, integrated with the Ollama API f
    
 ## Ollama Setup
 
-1. Install and run [Ollama](ollama.com)
+1. Install and run [Ollama](https://ollama.com/)
 2. Pull desired models (e.g.):
    ```bash
    ollama pull llama3
    
-## Usage
+### Usage
 1. **Access the app**: Visit http://localhost:8000 in your browser.
 2. **Authenticate**: Log in or register a new account.
 3. **Create a Chat**:
@@ -83,7 +85,7 @@ A web-based chat application built with Django, integrated with the Ollama API f
 5. **Manage Chats**:
     * Rename chats via the chat header
     * Delete chats using the trash icon
-## Project Structure
+### Project Structure
 ```
 .
 ├── account/               # Authentication app
