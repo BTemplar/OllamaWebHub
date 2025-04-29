@@ -102,7 +102,7 @@ A web-based chat application built with Django, integrated with the Ollama API f
 └── .env                   # Environment variables
 ```
 ## License
-MIT License. More details in the file [LICENSE](LICENSE).
+MIT License. More details in the file [LICENSE](LICENSE.txt).
 
 ---
 
