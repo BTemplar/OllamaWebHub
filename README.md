@@ -100,3 +100,12 @@ A web-based chat application built with Django, integrated with the Ollama API f
 ├── templates/             # HTML templates
 ├── OllamaWebHub/          # Django project config
 └── .env                   # Environment variables
+```
+## License
+MIT License. More details in the file [LICENSE](LICENSE).
+
+---
+
+Author: Oleg Rud  
+GitHub: [@BTemplar](https://github.com/BTemplar)  
+Email: [templar@internet.ru](mailto:templar@cyberswarm.ru)  
