@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load custom_filters %}
 
 {% block extra_css %}
 <style>
@@ -40,7 +41,6 @@
         border-radius: 0 15px 15px 15px;
     }
     
-    /* Адаптивность для мобильных */
     @media (max-width: 768px) {
         .user-message, .bot-message {
             max-width: 85%;
@@ -81,7 +81,6 @@
     border-color: #86b7fe;
     }
     
-    /* Для мобильных устройств */
     @media (max-width: 768px) {
         .chat-messages-container {
             height: calc(100vh - 160px);
@@ -93,7 +92,6 @@
         }
     }
     
-    /* Плавная прокрутка при новых сообщениях */
     @keyframes smooth-scroll {
         from { scroll-margin-bottom: 0; }
         to { scroll-margin-bottom: 100px; }
@@ -101,14 +99,64 @@
     
     .chat-messages-container {
         overscroll-behavior: contain;
-        padding-bottom: 20px; /* Воздух внизу */
+        padding-bottom: 20px;
     }
     
     .message-wrapper:last-child {
-        margin-bottom: 20px; /* Отступ для последнего сообщения */
+        margin-bottom: 20px;
     }
     .message-content {
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    
+    .file-upload {
+    position: relative;
+    display: inline-block;
+    cursor: pointer;
+    }
+    
+    .file-upload input[type="file"] {
+        position: absolute;
+        left: 0;
+        top: 0;
+        opacity: 0;
+        width: 100%;
+        height: 100%;
+        cursor: pointer;
+    }
+    
+    .upload-icon {
+        width: 60px;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.3s;
+    }
+    
+    .upload-icon:hover {
+        background: #ffffff;
+    }
+    
+    .upload-icon img {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .file-selected i {
+    color: #4CAF50 !important;
+    animation: pulse 0.5s;
+    }
+    
+    @keyframes pulse {
+        from { transform: scale(1); }
+        to { transform: scale(1.1); }
+    }
+    .message-thumbnail {
+    max-width: 150px;
+    height: auto;
+    border-radius: 8px;
+    margin-bottom: 8px;
     }
 </style>
 {% endblock %}
@@ -153,7 +201,7 @@
             <div class="d-flex flex-column h-100">
                 <!-- Chat header -->
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h3>{{ selected_branch.name }}</h3>
+                    <h3>{{ selected_branch.name }} (model: {{ selected_branch.selected_model }})</h3>
                     {% if selected_branch.description != None%}
                         <h4 class="text-muted">{{ selected_branch.description }}</h4>
                     {% endif %}
@@ -178,6 +226,12 @@
                     {% for msg in messages %}
                     <div class="message-wrapper {% if msg.sender == 'user' %}user-message{% else %}bot-message{% endif %} mb-3">
                         <div class="message-content p-3 rounded">
+                            {% if msg.sender == 'user' and msg.image_base64 %}
+                                <!-- Миниатюра изображения -->
+                                <img src="{{ msg.image_base64|base64_to_image | cut:"'"|cut:"["|cut:"]" }}" 
+                                     class="message-thumbnail" 
+                                     alt="Загруженное изображение" />
+                            {% endif %}
                             <!-- Заголовок с отправителем -->
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <strong>
@@ -205,18 +259,27 @@
 
                 <!-- Send message form -->
             <div class="mt-auto">
-                <form id="message-form" method="POST" action="{% url 'chat_detail' selected_branch.id %}">
+                <form id="message-form" method="POST" enctype="multipart/form-data" 
+                      action="{% url 'chat_detail' selected_branch.id %}">
                     {% csrf_token %}
                     <div class="input-group">
+                        {% if selected_branch.multimodal %}
+                            <div class="file-upload">
+                                <input type="file" name="image" accept="image/*" id="fileInput">
+                                <label for="fileInput" class="upload-icon">
+                                    <i class="fas fa-image fa-2x"></i>
+                                </label>
+                            </div>
+                        {% endif %}
                         <textarea name="message" 
-                                  id="message-form"
+                                  id="message-input"
                                   class="form-control"
                                   placeholder="Enter your message here..."
                                   rows="2"
                                   style="resize: none"
                                   required></textarea>
                         <button type="submit" class="btn btn-primary gradient-bg-btn">
-                            <i class="bi-send"></i> Send
+                            <i class="bi-send"></i> Send 
                         </button>
                     </div>
                 </form>
@@ -255,7 +318,7 @@
             textarea.disabled = isLoading;
             submitButton.disabled = isLoading;
             submitButton.innerHTML = isLoading 
-                ? '<div class="spinner-border spinner-border-sm" role="status"></div> Sending...'
+                ? '<div class="spinner-border spinner-border-sm" role="status"></div> Wait...'
                 : '<i class="bi-send"></i> Send';
         }
     
@@ -332,6 +395,17 @@
                     handleSubmit(e);
                 }
             });
+        }
+    });
+    </script>
+    
+    <script>
+    document.getElementById('fileInput').addEventListener('change', function(e) {
+        const icon = this.closest('.file-upload').querySelector('i');
+        if (this.files.length > 0) {
+            icon.parentElement.classList.add('file-selected');
+        } else {
+            icon.parentElement.classList.remove('file-selected');
         }
     });
     </script>

@@ -6,26 +6,33 @@ from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseServerError
 from requests.exceptions import ConnectionError
+from .image_processor import validate_image, image_to_base64, base64_to_image
 from django.utils import timezone
+import ast
 import logging
 
 logger = logging.getLogger(__name__)
 
 models = dict(OllamaAPI().list_models()).get('models')
+MULTIMODAL_MODELS = ['llava', 'gemma3', 'llama3.2-vision', 'llama4', 'bakllava', 'minicpm-v', 'moondream']
 AVAILABLE_MODELS = [model['name'] for model in models] if models is not None else []
-OLLAMA_VERSION = f"Ollama version: {OllamaAPI().get_version()}" if OllamaAPI().get_version() is not None else "Not available"
+OLLAMA_VERSION = f"Ollama version: {OllamaAPI().get_version()}" if OllamaAPI().get_version() is not None else "Ollama not available!"
 
 @login_required
 def create_chat(request):
     if request.method == 'POST':
         try:
+            print(request.POST.get('multimodal'))
             # Create a new chat branch
             new_branch = ChatBranch.objects.create(
                 name=request.POST.get('name', 'New chat'),
                 description=request.POST.get('description', None),
                 selected_model=request.POST.get('model', 'llama3'),
-                user=request.user
+                user=request.user,
+                temperature=float(request.POST.get('temperature', 0.7)),
+                multimodal=bool(request.POST.get('multimodal', False)),
             )
+
             messages.success(request, 'Chat successfully created!')
             return redirect('chat_detail', branch_id=new_branch.id)
 
@@ -44,13 +51,27 @@ def chat_view(request, branch_id=None):
     selected_branch = None
     chat_messages = []
     try:
-        if request.method == 'POST' and 'message' in request.POST:
+        if request.method == 'POST' and ('message' or 'image') in request.POST:
             if not branch_id:
                 messages.error(request, "Chat not selected")
                 return redirect('chat_home')
 
             selected_branch = get_object_or_404(ChatBranch, id=branch_id, user=user)
             message_text = request.POST.get('message', '').strip()
+            img_file = request.FILES.get('image', False)
+
+            if img_file:
+                img_file = request.FILES.get('image', False)
+
+                if not validate_image(img_file):
+                    messages.error(request, "Invalid image file")
+                    return redirect('chat_detail', branch_id=branch_id)
+
+                try:
+                    base64_image = image_to_base64(img_file)
+                except Exception as e:
+                    messages.error(request, "Error processing image")
+                    raise
 
             if not message_text:
                 messages.warning(request, "Message cannot be empty")
@@ -60,6 +81,7 @@ def chat_view(request, branch_id=None):
             ChatMessage.objects.create(
                 chat_branch=selected_branch,
                 sender='user',
+                image_base64=[base64_image] if img_file else None,
                 message=message_text
             )
 
@@ -73,16 +95,27 @@ def chat_view(request, branch_id=None):
                 role = "assistant" if msg.sender == "assistant" else msg.sender
                 chat_messages.append({
                     "role": role,
-                    "content": msg.message
+                    "content": msg.message,
+                    "images": ast.literal_eval(msg.image_base64) if msg.image_base64 else None
                 })
 
             try:
                 # Use chat_response method instead generate_response
-                response = OllamaAPI().chat_response(
-                    model_name=selected_branch.selected_model,
-                    messages=chat_messages,
-                    stream=False  # if True, also get stream of tokens
-                )
+                if not validate_image(img_file):
+                    response = OllamaAPI().chat_response(
+                        model_name=selected_branch.selected_model,
+                        messages=chat_messages,
+                        timeout=300,
+                        stream=False  # if True, also get stream of tokens
+                    )
+                else:
+                    response = OllamaAPI().chat_multimodal_response(
+                        model_name=selected_branch.selected_model,
+                        messages=chat_messages,
+                        images=[base64_image],
+                        timeout=300,
+                        stream=False  # if True, also get stream of tokens
+                    )
 
                 # Обработка ответа
                 if response and 'message' in response:
@@ -128,7 +161,8 @@ def chat_view(request, branch_id=None):
             'messages': chat_messages,
             'today': today,
             'models': AVAILABLE_MODELS,
-            'ollama_version': OLLAMA_VERSION
+            'ollama_version': OLLAMA_VERSION,
+            'multimodal': MULTIMODAL_MODELS,
         })
 
     except Exception as e:

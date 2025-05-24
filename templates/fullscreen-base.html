@@ -58,6 +58,16 @@
             <i class="bi-robot fs-1 text-white"></i>
         </div>
 
+        <!-- Messages -->
+        {% if msg %}
+        <div class="w-100 mb-4" style="max-width: 400px;">
+            <div class="alert alert-danger alert-dismissible fade show">
+                {{ msg }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        </div>
+        {% endif %}
+
         <!-- Main content -->
         <div class="auth-card p-4">
             {% block content %}

@@ -31,9 +31,9 @@ A web-based chat application built with Django, integrated with the Ollama API f
 ### Installation
 
 #### Prerequisites
-- Python 3.9+
+- Python 3.12+
 - Ollama server running locally (see [Ollama Setup](#ollama-setup))
-- Django 4.x
+- Django 5.x
 
 #### Steps
 1. Clone the repository:
