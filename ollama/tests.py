@@ -3,7 +3,7 @@ from unittest.mock import patch, MagicMock
 import io
 import base64
 from PIL import Image
-from ollama_app.image_processor import validate_image, image_to_base64
+from ollama.image_processor import validate_image, image_to_base64
 
 def create_valid_image_bytes():
     """Creates the bytes of a valid PNG image."""
@@ -44,7 +44,7 @@ class TestImageToBase64(unittest.TestCase):
         self.assertEqual(str(context.exception), 'The image file must be a valid image.')
 
     def test_validate_image_called(self):
-        with patch('ollama_app.image_processor.validate_image') as mock_validate:
+        with patch('ollama.image_processor.validate_image') as mock_validate:
             mock_validate.return_value = True
             file = io.BytesIO(b'data')
             image_to_base64(file)
@@ -53,7 +53,7 @@ class TestImageToBase64(unittest.TestCase):
     def test_file_seek_and_read_called(self):
         mock_file = MagicMock()
         mock_file.read.return_value = create_valid_image_bytes()
-        with patch('ollama_app.image_processor.validate_image', return_value=True):
+        with patch('ollama.image_processor.validate_image', return_value=True):
             image_to_base64(mock_file)
             mock_file.seek.assert_any_call(0)
             mock_file.read.assert_called_once()
@@ -61,7 +61,7 @@ class TestImageToBase64(unittest.TestCase):
     def test_error_during_read_raises_value_error(self):
         mock_file = MagicMock()
         mock_file.read.side_effect = Exception("Read error")
-        with patch('ollama_app.image_processor.validate_image', return_value=True):
+        with patch('ollama.image_processor.validate_image', return_value=True):
             with self.assertRaises(ValueError) as context:
                 image_to_base64(mock_file)
             self.assertEqual(str(context.exception), "Error converting file to base64")

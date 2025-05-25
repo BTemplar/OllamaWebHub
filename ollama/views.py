@@ -6,7 +6,7 @@ from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseServerError
 from requests.exceptions import ConnectionError
-from .image_processor import validate_image, image_to_base64, base64_to_image
+from .image_processor import validate_image, image_to_base64
 from django.utils import timezone
 import ast
 import logging

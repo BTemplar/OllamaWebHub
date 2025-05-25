@@ -1,5 +1,5 @@
 from django import template
-from ollama_app.image_processor import base64_to_image
+from ollama.image_processor import base64_to_image
 
 register = template.Library()
 
