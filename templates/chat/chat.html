@@ -1,7 +1,10 @@
 {% extends "base.html" %}
 {% load custom_filters %}
+{% load markdown_filter %}
 
 {% block extra_css %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'css/pygments.css' %}">
 <style>
     
     .chat-list {
@@ -24,7 +27,7 @@
     }
 
     .user-message .message-content {
-        background: rgba(var(--bs-success-rgb), 0.1) !important;
+        background: rgba(var(--bs-primary-rgb), 0.1) !important;
     }
     
     .user-message {
@@ -49,11 +52,11 @@
         }
     }
     
-    .bot-message .message-content {
-        background: rgba(var(--bs-secondary-rgb), 0.1);
-        border: 1px solid rgba(var(--bs-secondary-rgb), 0.2);
-        border-radius: 15px 15px 15px 0;
-    }
+    {#.bot-message .message-content {#}
+    {#    background: rgba(var(--bs-secondary-rgb), 0.1);#}
+    {#    border: 1px solid rgba(var(--bs-secondary-rgb), 0.2);#}
+    {#    border-radius: 15px 15px 15px 0;#}
+    {#}#}
     
     /* Адаптивность для мобильных */
     @media (max-width: 768px) {
@@ -158,6 +161,63 @@
     border-radius: 8px;
     margin-bottom: 8px;
     }
+    
+    .markdown-content pre {
+        background: rgb(88, 59, 124);
+        padding: 15px;
+        border-radius: 5px;
+        overflow-x: auto;
+        margin: 1em 0;
+    }
+    
+    .markdown-content code {
+        background: rgb(88, 59, 124);
+        padding: 2px 5px;
+        border-radius: 3px;
+        font-family: 'Fira Code', monospace;
+    }
+    
+    .markdown-content h1, .markdown-content h2 {
+        border-bottom: 1px solid #ffffff;
+        padding-bottom: 0.3em;
+    }
+    /* Стили для плашки с языком */
+    .code-header {
+        color: white;
+        padding: 5px 15px;
+        border-radius: 5px 5px 0 0;
+        font-family: monospace;
+        font-size: 0.9em;
+        display: inline-block;
+        margin-top: 1em;
+    }
+    
+    /* Стили для таблиц */
+    .markdown-content table {
+        border-collapse: collapse;
+        margin: 1em 0;
+        width: 100%;
+    }
+    
+    .markdown-content th, 
+    .markdown-content td {
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+    }
+    
+    .markdown-content th {
+        background-color: #583b7c;
+        font-weight: 600;
+    }
+    
+    .code-header {
+    color: #25ef05;
+    padding: 0px 15px;
+    border-radius: 5px 5px 0 0;
+    font-family: 'Fira Code', monospace;
+    }
+    
+    
 </style>
 {% endblock %}
 
@@ -250,7 +310,7 @@
                             
                             <!-- Message text -->
                             <div class="message-text">
-                                {{ msg.message|linebreaks }}
+                                {{ msg.message|markdown }}
                             </div>
                         </div>
                     </div>
