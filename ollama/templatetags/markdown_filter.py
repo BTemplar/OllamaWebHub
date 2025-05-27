@@ -78,14 +78,12 @@ def markdown_filter(text):
 
         for part in parts:
             if part[0] == 'text':
-                # Обработка обычного текста
                 html = md.markdown(
                     part[1],
                     extensions=['tables', 'extra']
                 )
                 processed_parts.append(html)
             elif part[0] == 'code':
-                # Обработка блока кода
                 lang, code = part[1], part[2]
                 try:
                     lexer = get_lexer_by_name(lang, stripall=True)

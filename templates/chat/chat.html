@@ -224,7 +224,7 @@
 {% block content %}
 <div class="container-fluid vh-100 d-flex flex-column">
     <div class="row overflow-hidden glassmorphism d-flex flex-column bg-dark bg-opacity-25">
-        <!-- Боковая панель -->
+        <!-- Sidebar -->
     <div class="chat-list overflow-auto col-md-3 p-3">
         <div class="p-3 bg-dark glassmorphism">
                 <button class="btn btn-primary w-100 mb-3 gradient-bg-btn" data-bs-toggle="modal" data-bs-target="#newChatModal" data-models= {{ models|safe }}>
@@ -292,7 +292,7 @@
                                      class="message-thumbnail" 
                                      alt="Загруженное изображение" />
                             {% endif %}
-                            <!-- Заголовок с отправителем -->
+                            <!-- Header with sender -->
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <strong>
                                     {% if msg.sender == 'user' %}
