@@ -51,14 +51,7 @@
             margin-right: 10px;
         }
     }
-    
-    {#.bot-message .message-content {#}
-    {#    background: rgba(var(--bs-secondary-rgb), 0.1);#}
-    {#    border: 1px solid rgba(var(--bs-secondary-rgb), 0.2);#}
-    {#    border-radius: 15px 15px 15px 0;#}
-    {#}#}
-    
-    /* Адаптивность для мобильных */
+
     @media (max-width: 768px) {
         .message-wrapper {
             max-width: 90%;
@@ -181,7 +174,7 @@
         border-bottom: 1px solid #ffffff;
         padding-bottom: 0.3em;
     }
-    /* Стили для плашки с языком */
+
     .code-header {
         color: white;
         padding: 5px 15px;
@@ -192,7 +185,6 @@
         margin-top: 1em;
     }
     
-    /* Стили для таблиц */
     .markdown-content table {
         border-collapse: collapse;
         margin: 1em 0;
@@ -270,6 +262,9 @@
                             <i class="bi-three-dots-vertical"></i>
                         </button>
                         <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#deleteMessagesModal">
+                                <i class="bi-arrow-counterclockwise"></i> Clear messages
+                            </a></li>
                             <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#renameChatModal">
                                 <i class="bi-pencil"></i> Rename
                             </a></li>
@@ -287,7 +282,7 @@
                     <div class="message-wrapper {% if msg.sender == 'user' %}user-message{% else %}bot-message{% endif %} mb-3">
                         <div class="message-content p-3 rounded">
                             {% if msg.sender == 'user' and msg.image_base64 %}
-                                <!-- Миниатюра изображения -->
+                                <!-- Thumbnail image -->
                                 <img src="{{ msg.image_base64|base64_to_image | cut:"'"|cut:"["|cut:"]" }}" 
                                      class="message-thumbnail" 
                                      alt="Загруженное изображение" />
@@ -317,7 +312,7 @@
                     {% endfor %}
                 </div>
 
-                <!-- Send message form -->
+            <!-- Send message form -->
             <div class="mt-auto">
                 <form id="message-form" method="POST" enctype="multipart/form-data" 
                       action="{% url 'chat_detail' selected_branch.id %}">

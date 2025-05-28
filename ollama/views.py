@@ -117,7 +117,7 @@ def chat_view(request, branch_id=None):
                         stream=False  # if True, also get stream of tokens
                     )
 
-                # Обработка ответа
+                # Processing the response
                 if response and 'message' in response:
                     ChatMessage.objects.create(
                         chat_branch=selected_branch,
@@ -193,3 +193,15 @@ def delete_chat(request, branch_id):
     branch = get_object_or_404(ChatBranch, id=branch_id, user=request.user)
     branch.delete()
     return redirect('chat_home')
+
+@require_POST
+@login_required
+def delete_all_messages(request, branch_id):
+    branch = get_object_or_404(ChatBranch, id=branch_id, user=request.user)
+
+    if request.method == 'POST':
+        ChatMessage.objects.filter(chat_branch=branch).delete()
+
+        return redirect('chat_detail', branch_id=branch.id)
+
+    return redirect('some_view')

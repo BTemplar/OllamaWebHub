@@ -122,6 +122,33 @@
     </div>
 </div>
 
+<!-- Modal window to delete all messages -->
+{% if selected_branch %}
+<div class="modal fade" id="deleteMessagesModal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Clear chat history</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete ALL messages in "{{ selected_branch.name }}"?</p>
+                <div class="alert alert-warning mt-3">
+                    <i class="bi bi-exclamation-triangle"></i> This action cannot be undone!
+                </div>
+            </div>
+            <div class="modal-footer">
+                <form method="POST" action="{% url 'delete_all_messages' selected_branch.id %}">
+                    {% csrf_token %}
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Delete All Messages</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <script>
     const rangeInput = document.getElementById('customRange');
     const rangeValue = document.getElementById('rangeValue');
