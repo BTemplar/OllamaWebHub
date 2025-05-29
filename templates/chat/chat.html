@@ -203,13 +203,38 @@
     }
     
     .code-header {
-    color: #25ef05;
-    padding: 0px 15px;
-    border-radius: 5px 5px 0 0;
-    font-family: 'Fira Code', monospace;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        color: #25ef05;
+        padding: 0px 15px;
+        border-radius: 5px 5px 0 0;
+        font-family: 'Fira Code', monospace;
     }
     
+    .code-actions {
+        display: flex;
+        gap: 10px;
+    }
     
+    .copy-btn, .download-btn {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #ffffff;
+        border-color: #667eea;
+        padding: 4px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        transition: background 0.2s;
+    }
+    
+    .copy-btn:hover, .download-btn:hover {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .code-block {
+        position: relative;
+    }
 </style>
 {% endblock %}
 
@@ -462,6 +487,62 @@
         } else {
             icon.parentElement.classList.remove('file-selected');
         }
+    });
+    </script>
+    
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        document.body.addEventListener('click', function(e) {
+            // Copy processing
+            if (e.target.classList.contains('copy-btn')) {
+                const button = e.target;
+                const targetId = button.getAttribute('data-clipboard-target');
+                const targetElement = document.querySelector(targetId);
+                const textToCopy = targetElement.querySelector('pre').innerText;
+                const originalText = button.getAttribute('data-original-text') || button.innerText;
+                
+                if (!button.getAttribute('data-original-text')) {
+                    button.setAttribute('data-original-text', originalText);
+                }
+                
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    button.innerText = 'Copied!';
+                    setTimeout(() => {
+                        button.innerText = originalText;
+                    }, 2000);
+                });
+            }
+            
+            // Download processing
+            if (e.target.classList.contains('download-btn')) {
+                const button = e.target;
+                const targetId = button.getAttribute('data-target');
+                const lang = button.getAttribute('data-lang');
+                const targetElement = document.querySelector(targetId);
+                const codeContent = targetElement.querySelector('pre').innerText;
+                
+                // Defining a file name in a language
+                let filename = 'code.txt';
+                if (lang === 'python') filename = 'script.py';
+                else if (lang === 'java') filename = 'Main.java';
+                else if (lang === 'javascript' || lang === 'js') filename = 'script.js';
+                else if (lang === 'html') filename = 'page.html';
+                else if (lang === 'css') filename = 'styles.css';
+                else if (lang === 'cpp') filename = 'program.cpp';
+                else if (lang === 'go') filename = 'main.go';
+                
+                const blob = new Blob([codeContent], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+        });
     });
     </script>
 {% endblock %}
