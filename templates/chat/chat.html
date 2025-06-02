@@ -206,7 +206,7 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        color: #25ef05;
+        color: #0ddabb;
         padding: 0px 15px;
         border-radius: 5px 5px 0 0;
         font-family: 'Fira Code', monospace;
@@ -221,7 +221,7 @@
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: #ffffff;
         border-color: #667eea;
-        padding: 4px 10px;
+        padding: 0px 10px;
         border-radius: 4px;
         cursor: pointer;
         font-size: 0.85rem;
@@ -234,6 +234,15 @@
     
     .code-block {
         position: relative;
+    }
+    
+    .reasoning-item {
+        transition: all 0.3s ease;
+        border-left: 3px solid #0D6EFD;
+    }
+    
+    .reasoning-item:hover {
+        box-shadow: 0 0 5px rgba(13, 202, 240, 0.2);
     }
 </style>
 {% endblock %}
@@ -330,6 +339,27 @@
                             
                             <!-- Message text -->
                             <div class="message-text">
+                                {% if msg.think != '' %}
+                                    <div class="think-spoiler mb-2">
+                                        <!-- Spoiler toggle button -->
+                                        <a class="d-flex align-items-center spoiler-toggle text-decoration-none" 
+                                           data-bs-toggle="collapse" 
+                                           href="#think-{{ msg.id }}-{{ forloop.counter }}"
+                                           role="button"
+                                           aria-expanded="false">
+                                            <i class="bi bi-chevron-right toggle-icon me-2" style="color: #0ddabb;"></i>
+                                            <span class="small fw-medium" style="color: #0ddabb;">Show model reasoning</span>
+                                        </a>
+                                        
+                                        <!-- Collapsible think content -->
+                                        <div class="collapse mt-1" id="think-{{ msg.id }}-{{ forloop.counter }}">
+                                            <div class="reasoning-content p-2 bg-info-subtle rounded">
+                                                <i class="bi bi-lightbulb me-2" style="color: #0D6EFD;"></i>
+                                                <span class="text-muted">{{ msg.think|markdown }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endif %}
                                 {{ msg.message|markdown }}
                             </div>
                         </div>

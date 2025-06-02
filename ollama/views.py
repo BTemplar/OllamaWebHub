@@ -13,24 +13,28 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-models = dict(OllamaAPI().list_models()).get('models')
 MULTIMODAL_MODELS = ['llava', 'gemma3', 'llama3.2-vision', 'llama4', 'bakllava', 'minicpm-v', 'moondream']
-AVAILABLE_MODELS = [model['name'] for model in models] if models is not None else []
+MODELS_WITH_REASONING = ['qwen3', 'deepseek-r1']
 OLLAMA_VERSION = f"Ollama version: {OllamaAPI().get_version()}" if OllamaAPI().get_version() is not None else "Ollama not available!"
 
 @login_required
 def create_chat(request):
     if request.method == 'POST':
         try:
-            print(request.POST.get('multimodal'))
             # Create a new chat branch
             new_branch = ChatBranch.objects.create(
-                name=request.POST.get('name', 'New chat'),
-                description=request.POST.get('description', None),
-                selected_model=request.POST.get('model', 'llama3'),
-                user=request.user,
-                temperature=float(request.POST.get('temperature', 0.7)),
-                multimodal=bool(request.POST.get('multimodal', False)),
+                name = request.POST.get('name', 'New chat'),
+                description = request.POST.get('description', None),
+                prompt = request.POST.get('prompt', ''),
+                request_type = request.POST.get('request_type', 'CH'),
+                response_type = request.POST.get('response_type', 'OT'),
+                selected_model = request.POST.get('model', 'llama3'),
+                user = request.user,
+                temperature = float(request.POST.get('temperature', 0.7)),
+                multimodal = bool(request.POST.get('multimodal', False)),
+                think = bool(request.POST.get('think', False)),
+                reasoning = bool(request.POST.get('reasoning', False)),
+                num_ctx = int(request.POST.get('num_ctx', 2048)),
             )
 
             messages.success(request, 'Chat successfully created!')
@@ -45,6 +49,8 @@ def create_chat(request):
 
 @login_required
 def chat_view(request, branch_id=None):
+    models = dict(OllamaAPI().list_models()).get('models')
+    available_models = [model['name'] for model in models] if models is not None else []
     today = timezone.now().date()
     user = request.user
     branches = ChatBranch.objects.filter(user=user)
@@ -69,9 +75,15 @@ def chat_view(request, branch_id=None):
 
                 try:
                     base64_image = image_to_base64(img_file)
-                except Exception as e:
-                    messages.error(request, "Error processing image")
+                except Exception as error:
+                    messages.error(request, f"Error processing image. Error: {error}")
                     raise
+            else:
+                base64_image = None
+
+            request_type = selected_branch.request_type
+            response_type = selected_branch.response_type
+            stream = True if response_type == 'ST' else False
 
             if not message_text:
                 messages.warning(request, "Message cannot be empty")
@@ -98,23 +110,29 @@ def chat_view(request, branch_id=None):
                     "content": msg.message,
                     "images": ast.literal_eval(msg.image_base64) if msg.image_base64 else None
                 })
-
             try:
                 # Use chat_response method instead generate_response
-                if not validate_image(img_file):
+                if request_type == 'CH':
                     response = OllamaAPI().chat_response(
                         model_name=selected_branch.selected_model,
                         messages=chat_messages,
-                        timeout=300,
-                        stream=False  # if True, also get stream of tokens
-                    )
-                else:
-                    response = OllamaAPI().chat_multimodal_response(
-                        model_name=selected_branch.selected_model,
-                        messages=chat_messages,
+                        num_ctx=selected_branch.num_ctx,
+                        system_prompt=selected_branch.prompt,
+                        think = selected_branch.think,
                         images=[base64_image],
                         timeout=300,
-                        stream=False  # if True, also get stream of tokens
+                        stream=stream  # if True, also get stream of tokens
+                    )
+                else:
+                    response = OllamaAPI().generate_response(
+                        model_name=selected_branch.selected_model,
+                        messages=chat_messages,
+                        num_ctx=selected_branch.num_ctx,
+                        system_prompt=selected_branch.prompt,
+                        think=selected_branch.think,
+                        images=[base64_image],
+                        timeout=300,
+                        stream=stream  # if True, also get stream of tokens
                     )
 
                 # Processing the response
@@ -122,7 +140,8 @@ def chat_view(request, branch_id=None):
                     ChatMessage.objects.create(
                         chat_branch=selected_branch,
                         sender='assistant',
-                        message=response['message']['content']
+                        message=response['message']['content'],
+                        think=response.get('message', {}).get('thinking', ''),
                     )
                 else:
                     # Create error message in chat
@@ -160,9 +179,10 @@ def chat_view(request, branch_id=None):
             'selected_branch': selected_branch,
             'messages': chat_messages,
             'today': today,
-            'models': AVAILABLE_MODELS,
+            'models': available_models,
             'ollama_version': OLLAMA_VERSION,
             'multimodal': MULTIMODAL_MODELS,
+            'reasoning': MODELS_WITH_REASONING,
         })
 
     except Exception as e:

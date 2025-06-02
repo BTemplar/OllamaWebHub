@@ -5,6 +5,7 @@ class OllamaAPI:
     def __init__(self, api_url="http://localhost:11434/api"):
         self.api_url = api_url
 
+
     def get_version(self):
         """
         Gets the Ollama version.
@@ -22,6 +23,7 @@ class OllamaAPI:
         except requests.exceptions.RequestException as e:
             print(f"Error getting version: {e}")
             return None
+
 
     def pull_model(self, model_name, insecure=False, stream=False):
         """
@@ -49,6 +51,7 @@ class OllamaAPI:
             print(f"Error downloading model: {e}")
             return None
 
+
     def push_model(self, model_name, insecure=False, stream=False):
         """
         Pushes the model to the Ollama API.
@@ -75,6 +78,7 @@ class OllamaAPI:
             print(f"Error loading model: {e}")
             return None
 
+
     def create_model_from_safetensors(self, model_name, files):
         """
         Creates a model from a directory of safetensors files.
@@ -95,6 +99,7 @@ class OllamaAPI:
             print(f"Error creating model: {e}")
             return None
 
+
     def delete_model(self, model_name):
         """
         Deletes the model.
@@ -113,6 +118,7 @@ class OllamaAPI:
             print(f"Error deleting model: {e}")
             return None
 
+
     def list_models(self):
         """
         Gets a list of available models.
@@ -128,92 +134,29 @@ class OllamaAPI:
             print(f"Error getting list of models: {e}")
             return None
 
-    def generate_response(self, model_name, prompt, temperature=0.7, top_p=0.95, top_k=40, repeat_penalty=1.1,
-                          stream=False, timeout=30):
-        """
-        Generates a response from the model.
 
-        Args:
-            model_name (str): The name of the model to use for generating the response.
-            prompt (str): The prompt to use for generating the response.
-            temperature (float, optional): The temperature to use for generating the response. Defaults to 0.7.
-            top_p (float, optional): The top_p to use for generating the response. Defaults to 0.95.
-            top_k (int, optional): The top_k to use for generating the response. Defaults to 40.
-            repeat_penalty (float, optional): The repeat_penalty to use for generating the response. Defaults to 1.1.
-            stream (bool, optional): Whether to stream the response. Defaults to False.
-            timeout (int, optional): The timeout for the request. Defaults to 30.
-
-        Returns:
-            dict: The JSON response from the API if the request is successful, None otherwise.
-        """
-        data = {
-            "model": model_name,
-            "prompt": prompt,
-            "temperature": temperature,
-            "top_p": top_p,
-            "top_k": top_k,
-            "repeat_penalty": repeat_penalty,
-            "stream": stream,
-        }
-        if stream:
-            data["stream"] = True
-
-        try:
-            response = requests.post(f"{self.api_url}/generate", json=data, timeout=timeout)
-            response.raise_for_status()
-            return response.json()
-        except requests.exceptions.RequestException as e:
-            print(f"Error generating response: {e}")
-            return None
-
-    def generate_multimodal_response(self, model_name, prompt, images=None, temperature=0.7):
-        """
-        Generates a response from a multimodal model.
-
-        Args:
-            model_name (str): The name of the multimodal model.
-            prompt (str): The text prompt.
-            images (list, optional): A list of base64-encoded images. Defaults to None.
-            temperature (float, optional): The temperature for generating the response. Defaults to 0.7.
-
-        Returns:
-            dict: The response from the model.
-        """
-
-        data = {
-            "model": model_name,
-            "prompt": prompt,
-            "temperature": temperature,
-        }
-
-        if images:
-            data["images"] = images
-
-        try:
-            response = requests.post(f"{self.api_url}/generate", json=data, timeout=30)
-            response.raise_for_status()
-            return response.json()
-        except requests.exceptions.RequestException as e:
-            print(f"Error generating response: {e}")
-            return None
-
-    def chat_response(self, model_name, messages, tools=None, format=None, temperature=0.7, top_p=0.95, top_k=40,
-                      repeat_penalty=1.1, options=None, stream=False, keep_alive=None, timeout=30):
+    def generate_response(self, model_name, messages, images=None, tools=None, format=None, temperature=0.7,
+                                 top_p=0.95, top_k=40, num_ctx=2048, think = False, repeat_penalty=1.1, options=None,
+                                 stream=False, keep_alive=None, system_prompt=None, timeout=30):
         """
         Generates a chat response using the specified model and parameters.
 
         Args:
             model_name (str): The name of the model to use for generating the response.
             messages (list): A list of messages to use for generating the response.
+            images (list, optional): A list of base64-encoded images. Defaults to None.
             tools (list, optional): A list of tools to use for generating the response. Defaults to None.
             format (str, optional): The format of the response. Defaults to None.
             temperature (float, optional): The temperature to use for generating the response. Defaults to 0.7.
             top_p (float, optional): The top_p to use for generating the response. Defaults to 0.95.
             top_k (int, optional): The top_k to use for generating the response. Defaults to 40.
+            num_ctx (int, optional): The maximum number of tokens to use for generating the response. Defaults to 2048.
+            think (bool, optional): Whether to generate a response with thinking. Defaults to True.
             repeat_penalty (float, optional): The repeat_penalty to use for generating the response. Defaults to 1.1.
             options (dict, optional): Additional options for generating the response. Defaults to None.
             stream (bool, optional): Whether to stream the response. Defaults to False.
-            keep_alive (bool, optional): Whether to keep the connection alive. Defaults to None.
+            keep_alive (bool, optional): Controls how long the model will stay loaded into memory following the request (default: 5m). Defaults to None.
+            system_prompt (str, optional): The system prompt to use for generating the response. Defaults to None.
             timeout (int, optional): The timeout for the request. Defaults to 30.
 
         Returns:
@@ -225,15 +168,20 @@ class OllamaAPI:
             "top_p": top_p,
             "top_k": top_k,
             "repeat_penalty": repeat_penalty,
+            "num_ctx": num_ctx,
         }
         if options:
             options_dict.update(options)
 
         data = {
             "model": model_name,
-            "messages": messages,
+            "message": messages,
+            "think": think,
             "stream": stream,
         }
+
+        if images:
+            data["images"] = images
 
         if tools is not None:
             data["tools"] = tools
@@ -244,9 +192,15 @@ class OllamaAPI:
         if options_dict:
             data["options"] = options_dict
 
+        if system_prompt:
+            system_message = {"role": "system",
+                                   "content": f"{system_prompt}"
+                                   }
+            data["messages"].append(system_message)
+
         try:
             response = requests.post(
-                f"{self.api_url}/chat",
+                f"{self.api_url}/generate",
                 json=data,
                 timeout=timeout,
                 stream=stream
@@ -273,9 +227,10 @@ class OllamaAPI:
             print(f"Error generating chat response: {e}")
             return None
 
-    def chat_multimodal_response(self, model_name, messages, images=None, tools=None, format=None, temperature=0.7,
-                                 top_p=0.95, top_k=40,
-                                 repeat_penalty=1.1, options=None, stream=False, keep_alive=None, timeout=30):
+
+    def chat_response(self, model_name, messages, images=None, tools=None, format=None, temperature=0.7,
+                                 top_p=0.95, top_k=40, num_ctx=2048, think = False, repeat_penalty=1.1, options=None,
+                                 stream=False, keep_alive=None, system_prompt=None, timeout=30):
         """
         Generates a chat response using the specified model and parameters.
 
@@ -288,10 +243,13 @@ class OllamaAPI:
             temperature (float, optional): The temperature to use for generating the response. Defaults to 0.7.
             top_p (float, optional): The top_p to use for generating the response. Defaults to 0.95.
             top_k (int, optional): The top_k to use for generating the response. Defaults to 40.
+            num_ctx (int, optional): The maximum number of tokens to use for generating the response. Defaults to 2048.
+            think (bool, optional): Whether to generate a response with thinking. Defaults to True.
             repeat_penalty (float, optional): The repeat_penalty to use for generating the response. Defaults to 1.1.
             options (dict, optional): Additional options for generating the response. Defaults to None.
             stream (bool, optional): Whether to stream the response. Defaults to False.
-            keep_alive (bool, optional): Whether to keep the connection alive. Defaults to None.
+            keep_alive (bool, optional): Controls how long the model will stay loaded into memory following the request (default: 5m). Defaults to None.
+            system_prompt (str, optional): The system prompt to use for generating the response. Defaults to None.
             timeout (int, optional): The timeout for the request. Defaults to 30.
 
         Returns:
@@ -303,6 +261,7 @@ class OllamaAPI:
             "top_p": top_p,
             "top_k": top_k,
             "repeat_penalty": repeat_penalty,
+            "num_ctx": num_ctx,
         }
         if options:
             options_dict.update(options)
@@ -310,6 +269,7 @@ class OllamaAPI:
         data = {
             "model": model_name,
             "messages": messages,
+            "think": think,
             "stream": stream,
         }
 
@@ -324,6 +284,12 @@ class OllamaAPI:
             data["keep_alive"] = keep_alive
         if options_dict:
             data["options"] = options_dict
+
+        if system_prompt:
+            system_message = {"role": "system",
+                                   "content": f"{system_prompt}"
+                                   }
+            data["messages"].append(system_message)
 
         try:
             response = requests.post(

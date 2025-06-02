@@ -9,6 +9,7 @@
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div id="multimodal-models" data-models="{{ multimodal|join:'; ' }}"></div>
+        <div id="reasoning-models" data-models="{{ reasoning|join:'; ' }}"></div>
         <div class="modal-body">
           <div class="mb-3">
           <label class="form-label">Chat label</label>
@@ -18,12 +19,21 @@
                    required
                    placeholder="Enter chat label">
           </div>
+        
           <div class="mb-3">
           <label class="form-label">Chat discription</label>    
               <input type="text" 
                      name="description" 
                      class="form-control"
                      placeholder="Enter chat discription">
+          </div>
+        
+          <div class="mb-3">
+          <label class="form-label">System prompt</label>    
+              <input type="text" 
+                     name="prompt" 
+                     class="form-control"
+                     placeholder="Enter chat prompt">
           </div>
         
           <div class="mb-3">
@@ -38,6 +48,18 @@
                        value="0.7">
           </div>
         
+          <div class="mb-3">
+                <label for="num_ctxRange" class="form-label">Token window size </label><br><span class="text-center" id="num_ctxValue">2000</span></label>
+                <input type="range" 
+                       class="form-range" 
+                       min="2000" 
+                       max="128000" 
+                       step="1000" 
+                       id="num_ctxRange" 
+                       name="num_ctx"
+                       value="2048">
+          </div>
+        
           <div class="mb-3 form-check">
                 <input type="checkbox" 
                        class="form-check-input" 
@@ -46,6 +68,26 @@
                        value="True"
                        disabled>
                 <label class="form-check-label" for="multimodalCheckbox">Multimodal</label>
+          </div>
+        
+          <div class="mb-3 form-check">
+                <input type="checkbox" 
+                       class="form-check-input" 
+                       id="thinkCheckbox" 
+                       name="think"
+                       value="True"
+                       disabled>
+                <label class="form-check-label" for="thinkCheckbox">Reasoning's enabled?</label>
+          </div>
+        
+          <div class="mb-3 form-check">
+                <input type="checkbox" 
+                       class="form-check-input" 
+                       id="reasoningCheckbox" 
+                       name="reasoning"
+                       value="True"
+                       disabled>
+                <label class="form-check-label" for="reasoningCheckbox">Show reasoning?</label>
           </div>
             
           <div class="mb-3">
@@ -157,31 +199,82 @@
         rangeValue.textContent = this.value;
     });
 </script>
+
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const multimodalElement = document.getElementById('multimodal-models');
-    const multimodalModels = multimodalElement.dataset.models
-        .split(';')
-        .map(item => item.trim().toLowerCase());
+    const tokensInput = document.getElementById('num_ctxRange');
+    const tokensValue = document.getElementById('num_ctxValue');
+    
+    tokensInput.addEventListener('input', function() {
+        tokensValue.textContent = this.value;
+    });
+</script>
 
-    const modelSelect = document.getElementById('modelSelect');
-    const multimodalCheckbox = document.getElementById('multimodalCheckbox');
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const multimodalElement = document.getElementById("multimodal-models");
+  const thinkElement = document.getElementById("reasoning-models");
 
-    function updateCheckboxState() {
-        const selectedModel = modelSelect.value
-            .split(':')[0]
-            .trim()
-            .toLowerCase();
+  const modelSelect = document.getElementById("modelSelect");
+  const multimodalCheckbox = document.getElementById("multimodalCheckbox");
+  const thinkCheckbox = document.getElementById("thinkCheckbox");
+  const reasoningCheckbox = document.getElementById("reasoningCheckbox");
 
-        const isMultimodal = multimodalModels.some(
-            model => selectedModel.includes(model)
-        );
+  // Получение и нормализация списков моделей
+  const multimodalModels = multimodalElement
+    .dataset.models
+    .split(";")
+    .map(item => item.trim().toLowerCase());
 
-        multimodalCheckbox.disabled = !isMultimodal;
-        multimodalCheckbox.checked = isMultimodal;
+  const thinkModels = thinkElement
+    .dataset.models
+    .split(";")
+    .map(item => item.trim().toLowerCase());
+
+  // Получение текущей выбранной модели (без префикса, нормализовано)
+  function getSelectedModel() {
+    return modelSelect.value
+      .split(":")[0]
+      .trim()
+      .toLowerCase();
+  }
+
+  // Обновление состояния чекбокса "multimodal"
+  function updateMultimodalCheckboxState() {
+    const selectedModel = getSelectedModel();
+    const isAvailable = multimodalModels.includes(selectedModel);
+    multimodalCheckbox.disabled = !isAvailable;
+    multimodalCheckbox.checked = isAvailable;
+  }
+
+  // Обновление состояния чекбокса "think"
+  function updateThinkCheckboxState() {
+    const selectedModel = getSelectedModel();
+    const isAvailable = thinkModels.includes(selectedModel);
+    thinkCheckbox.disabled = !isAvailable;
+    thinkCheckbox.checked = isAvailable;
+  }
+
+  // Обновление состояния чекбокса "reasoning" в зависимости от "think"
+  function updateReasoningCheckboxState() {
+    reasoningCheckbox.disabled = !thinkCheckbox.checked;
+    if (!thinkCheckbox.checked) {
+      reasoningCheckbox.checked = false;
     }
+  }
 
-    modelSelect.addEventListener('change', updateCheckboxState);
-    updateCheckboxState();
+  // Инициализация
+  updateMultimodalCheckboxState();
+  updateThinkCheckboxState();
+  updateReasoningCheckboxState();
+
+  // Слушатель события на изменение модели, обновляет все три чекбокса
+  modelSelect.addEventListener("change", () => {
+    updateMultimodalCheckboxState();
+    updateThinkCheckboxState();
+    updateReasoningCheckboxState(); // Важно: вызываем здесь!
+  });
+
+  // Слушатель изменения `think`, чтобы синхронизировать `reasoning`
+  thinkCheckbox.addEventListener("change", updateReasoningCheckboxState);
 });
 </script>
