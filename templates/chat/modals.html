@@ -192,21 +192,15 @@
 {% endif %}
 
 <script>
-    const rangeInput = document.getElementById('customRange');
-    const rangeValue = document.getElementById('rangeValue');
-    
-    rangeInput.addEventListener('input', function() {
-        rangeValue.textContent = this.value;
-    });
-</script>
+    function updateValue(input, display) {
+        input.addEventListener('input', function() {
+            display.textContent = this.value;
+        });
+    }
 
-<script>
-    const tokensInput = document.getElementById('num_ctxRange');
-    const tokensValue = document.getElementById('num_ctxValue');
-    
-    tokensInput.addEventListener('input', function() {
-        tokensValue.textContent = this.value;
-    });
+    // We use the function for both controls
+    updateValue(document.getElementById('customRange'), document.getElementById('rangeValue'));
+    updateValue(document.getElementById('num_ctxRange'), document.getElementById('num_ctxValue'));
 </script>
 
 <script>
@@ -219,7 +213,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const thinkCheckbox = document.getElementById("thinkCheckbox");
   const reasoningCheckbox = document.getElementById("reasoningCheckbox");
 
-  // Получение и нормализация списков моделей
+  // Getting and normalizing model lists
   const multimodalModels = multimodalElement
     .dataset.models
     .split(";")
@@ -230,7 +224,7 @@ document.addEventListener("DOMContentLoaded", () => {
     .split(";")
     .map(item => item.trim().toLowerCase());
 
-  // Получение текущей выбранной модели (без префикса, нормализовано)
+  // Getting the currently selected model (without prefix, normalized)
   function getSelectedModel() {
     return modelSelect.value
       .split(":")[0]
@@ -238,7 +232,7 @@ document.addEventListener("DOMContentLoaded", () => {
       .toLowerCase();
   }
 
-  // Обновление состояния чекбокса "multimodal"
+  // Updating the status of the "multimodal" checkbox
   function updateMultimodalCheckboxState() {
     const selectedModel = getSelectedModel();
     const isAvailable = multimodalModels.includes(selectedModel);
@@ -246,7 +240,7 @@ document.addEventListener("DOMContentLoaded", () => {
     multimodalCheckbox.checked = isAvailable;
   }
 
-  // Обновление состояния чекбокса "think"
+  // Updating the status of the "think" checkbox
   function updateThinkCheckboxState() {
     const selectedModel = getSelectedModel();
     const isAvailable = thinkModels.includes(selectedModel);
@@ -254,7 +248,7 @@ document.addEventListener("DOMContentLoaded", () => {
     thinkCheckbox.checked = isAvailable;
   }
 
-  // Обновление состояния чекбокса "reasoning" в зависимости от "think"
+  // Updating the state of the "reasoning" checkbox depending on "think"
   function updateReasoningCheckboxState() {
     reasoningCheckbox.disabled = !thinkCheckbox.checked;
     if (!thinkCheckbox.checked) {
@@ -262,19 +256,19 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Инициализация
+  // Initialization
   updateMultimodalCheckboxState();
   updateThinkCheckboxState();
   updateReasoningCheckboxState();
 
-  // Слушатель события на изменение модели, обновляет все три чекбокса
+  // The listener of the model change event updates all three checkboxes
   modelSelect.addEventListener("change", () => {
     updateMultimodalCheckboxState();
     updateThinkCheckboxState();
-    updateReasoningCheckboxState(); // Важно: вызываем здесь!
+    updateReasoningCheckboxState(); // Important: we are calling here!
   });
 
-  // Слушатель изменения `think`, чтобы синхронизировать `reasoning`
+  // Listener changes `think` to synchronize `reasoning`
   thinkCheckbox.addEventListener("change", updateReasoningCheckboxState);
 });
 </script>

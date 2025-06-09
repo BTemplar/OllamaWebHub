@@ -113,7 +113,7 @@ def chat_view(request, branch_id=None):
             try:
                 # Use chat_response method instead generate_response
                 if request_type == 'CH':
-                    response = OllamaAPI().chat_response(
+                    response = OllamaAPI().chat(
                         model_name=selected_branch.selected_model,
                         messages=chat_messages,
                         num_ctx=selected_branch.num_ctx,

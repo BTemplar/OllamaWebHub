@@ -7,71 +7,79 @@ from ast import literal_eval
 
 def validate_image(file: Any) -> bool:
     """
-    Validate an image file.
-    This function validates an image file by attempting to open it with the Pillow library.
-    If the file is a valid image, it returns True. If the file is not a valid image, it returns False.
+    Validate an image file using Pillow (PIL).
 
     Args:
-        file (Any): The image file to validate.
+        file (Any): The image file to validate, expected to be a binary stream.
 
     Returns:
         bool: True if the file is a valid image, False otherwise.
     """
     try:
+        # Read the file content
         file.seek(0)
         image_data = file.read()
+
+        # Use Pillow to attempt opening and verifying the image
         with Image.open(io.BytesIO(image_data)) as img:
-            img.verify()
+            img.verify()  # This raises an exception if the image is invalid
+
         return True
-    except Exception:
+    except (IOError, ValueError, Image.DecompressionBombError):
+        # Catch specific exceptions related to image processing
         return False
 
 
 def image_to_base64(file: Any) -> str:
     """
-    Convert an image file to base64.
-    This function converts an image file to base64 by reading the file and encoding it using base64.
+    Convert a validated image file stream into a base64 encoded string.
+
     Args:
-        file (Any): The image file to convert.
+        file (Any): The image file stream that has been validated.
 
     Returns:
-        str: The base64 representation of the image file.
+        str: The base64 encoded string of the image.
 
     Raises:
-        ValueError: If there is an error converting the file to base64.
+        ValueError: If the file is not a valid image or if conversion fails.
     """
     try:
-        is_image = validate_image(file)
-        if not is_image:
-            raise ValueError('The image file must be a valid image.')
-        else:
-            file.seek(0)
-            image_data = file.read()
-            return base64.b64encode(image_data).decode('utf-8')
-    except Exception as error:
-        if isinstance(error, ValueError):
-            raise error
-        raise ValueError("Error converting file to base64") from error
+        # Ensure the file is valid
+        if not validate_image(file):
+            raise ValueError("The provided file is not a valid image.")
+
+        # Read the file content for encoding
+        file.seek(0)
+        image_data = file.read()
+        base64_str = base64.b64encode(image_data).decode('utf-8')
+
+        return base64_str
+    except Exception as e:
+        raise ValueError(f"Failed to convert image to base64: {str(e)}") from e
+
 
 def base64_to_image(base64_str: str) -> Image.Image:
     """
-    Converts a base64 string to an image.
+    Convert a base64 encoded string into an Pillow (PIL) Image object.
 
     Args:
-        base64_str (str): The base64 string to convert.
+        base64_str (str): The base64 encoded string representing the image.
 
     Returns:
-        Image.Image: The converted image.
+        Image.Image: A PIL Image object of the decoded image.
 
     Raises:
-        ValueError: If the input data is not a valid base64 string.
+        ValueError: If the input is not a valid base64 string or if decoding fails.
     """
     try:
-        image_data = base64.b64decode(base64_str)
-        img = Image.open(io.BytesIO(image_data))
+        # Decode the base64 string into bytes
+        decoded_image_bytes = base64.b64decode(base64_str)
 
+        # Open the image using Pillow's Image.open with BytesIO
+        img = Image.open(io.BytesIO(decoded_image_bytes))
         mime_type = img.format.lower()
 
         return f"data:{mime_type};base64,{literal_eval(base64_str)}"
-    except Exception as error:
-        raise ValueError("Invalid image data") from error
+
+    except (base64.binascii.Error, IOError) as error:
+        raise ValueError(f"Invalid base64 data or unable to decode image: {str(error)}") from error
