@@ -25,10 +25,10 @@ def process_code_blocks(text: str) -> list:
         list: A list of tuples containing the processed code blocks.
     """
     # Regular expression for searching code blocks:
-    # - `` - the beginning of the block
+    # - ``` - the beginning of the block
     # - (\w+) - programming language
     # - (.*?) - code content (unreliable capture)
-    # - `` - end of block
+    # - ``` - end of block
     pattern = re.compile(
         r'(?P<code>```(?P<lang>\w+)\n(?P<content>.*?)\n```)',
         re.DOTALL  # Ignores line breaks in the template

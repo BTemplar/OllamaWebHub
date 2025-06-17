@@ -244,6 +244,79 @@
     .reasoning-item:hover {
         box-shadow: 0 0 5px rgba(13, 202, 240, 0.2);
     }
+
+    .input-group.expanded textarea {
+        height: 250px;
+        font-size: 16px;
+    }
+    
+    .input-group.expanded .file-upload {
+        display: none;
+    }
+    
+    .expand-icon {
+        font-size: 1.2rem;
+        transition: transform 0.3s;
+    }
+    
+    .overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7); /* Более темный фон */
+        z-index: 999;
+        display: none;
+    }
+    
+    .input-group.expanded {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 90%;
+        max-width: 800px;
+        z-index: 1000;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 5px 30px rgba(0, 0, 0, 0.3);
+    }
+    
+    .input-group.expanded textarea {
+        height: 300px;
+        font-size: 16px;
+        background-color: #212529;
+        color: #dee2e6 !important;
+    }
+    
+    .input-group.expanded .file-upload {
+        display: none;
+    }
+    
+    body.modal-open {
+        overflow: hidden;
+    }
+    
+    #expand-toggle {
+        color: white;
+        z-index: 1;
+    }
+    
+    .input-group.expanded #expand-toggle {
+        position: absolute;
+        top: 22px;
+        right: 105px;
+        z-index: 1001;
+        color: white !important;
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+    }
 </style>
 {% endblock %}
 
@@ -369,6 +442,7 @@
 
             <!-- Send message form -->
             <div class="mt-auto">
+                <div id="overlay" class="overlay" style="display: none;"></div>
                 <form id="message-form" method="POST" enctype="multipart/form-data" 
                       action="{% url 'chat_detail' selected_branch.id %}">
                     {% csrf_token %}
@@ -381,6 +455,9 @@
                                 </label>
                             </div>
                         {% endif %}
+                        <button type="button" id="expand-toggle" class="btn btn-link">
+                            <i class="bi bi-arrows-fullscreen expand-icon"></i>
+                        </button>
                         <textarea name="message" 
                                   id="message-input"
                                   class="form-control"
@@ -388,6 +465,7 @@
                                   rows="2"
                                   style="resize: none"
                                   required></textarea>
+                        
                         <button type="submit" class="btn btn-primary gradient-bg-btn">
                             <i class="bi-send"></i> Send 
                         </button>
@@ -423,10 +501,48 @@
         const textarea = document.querySelector('textarea[name="message"]');
         const form = document.querySelector('#message-form');
         const submitButton = form.querySelector('button[type="submit"]');
+        const expandToggle = document.getElementById('expand-toggle');
+        const overlay = document.getElementById('overlay');
+        const inputGroup = document.querySelector('.input-group');
+        const textareaContainer = document.querySelector('.textarea-container');
+    
+        // expansion mode switching function
+        function toggleExpandMode() {
+            inputGroup.classList.toggle('expanded');
+            overlay.style.display = inputGroup.classList.contains('expanded') ? 'block' : 'none';
+            
+            const icon = expandToggle.querySelector('i');
+            icon.classList.toggle('bi-arrows-fullscreen');
+            icon.classList.toggle('bi-fullscreen-exit');
+            
+            if (inputGroup.classList.contains('expanded')) {
+                // Move the button to the textarea container
+                textareaContainer.appendChild(expandToggle);
+                textarea.focus();
+                document.body.classList.add('modal-open');
+            } else {
+                // Return the button to its original place
+                const textarea = textareaContainer.querySelector('textarea');
+                textareaContainer.insertBefore(expandToggle, textarea.nextSibling);
+                document.body.classList.remove('modal-open');
+            }
+        }
+    
+        // Event Handlers
+        expandToggle.addEventListener('click', toggleExpandMode);
+        overlay.addEventListener('click', toggleExpandMode);
+    
+        // Close by ESC
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && inputGroup.classList.contains('expanded')) {
+                toggleExpandMode();
+            }
+        });
     
         function setLoadingState(isLoading) {
             textarea.disabled = isLoading;
             submitButton.disabled = isLoading;
+            expandToggle.disabled = isLoading;
             submitButton.innerHTML = isLoading 
                 ? '<div class="spinner-border spinner-border-sm" role="status"></div> Wait...'
                 : '<i class="bi-send"></i> Send';
@@ -434,10 +550,10 @@
     
         async function handleSubmit(e) {
             e.preventDefault();
-            
+    
             const formData = new FormData(form);
             const message = formData.get('message').trim();
-            
+    
             if (!message) return;
     
             setLoadingState(true);
@@ -453,9 +569,9 @@
                 });
     
                 if (!response.ok) throw new Error('Network error');
-                
+    
                 const data = await response.json();
-                
+    
                 if (data.user_message) {
                     addMessageToChat(data.user_message);
                 }
@@ -464,8 +580,10 @@
                 }
     
                 textarea.value = '';
-                scrollToLatestMessage();
+                scrollToBottom();
     
+            } catch (error) {
+                console.error('Error:', error);
             } finally {
                 setLoadingState(false);
                 location.reload();
@@ -486,19 +604,20 @@
             `;
             messagesContainer.appendChild(messageDiv);
         }
+        
         function scrollToBottom() {
             if(messagesContainer) {
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            } else {
+            } else if (chatContainer) {
                 chatContainer.scrollTop = chatContainer.scrollHeight;
             }
         }
-        
+    
         scrollToBottom();
-        
+    
         if (form) {
             form.addEventListener('submit', handleSubmit);
-            
+    
             textarea.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
