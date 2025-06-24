@@ -50,7 +50,7 @@ def create_chat(request):
 @login_required
 def chat_view(request, branch_id=None):
     models = dict(OllamaAPI().list_models()).get('models')
-    available_models = [model['name'] for model in models] if models is not None else []
+    available_models = [model['name'] for model in models if models is not None and 'embed' not in model['name']]
     today = timezone.now().date()
     user = request.user
     branches = ChatBranch.objects.filter(user=user)
@@ -121,7 +121,7 @@ def chat_view(request, branch_id=None):
                         think = selected_branch.think,
                         images=[base64_image],
                         timeout=300,
-                        stream=stream  # if True, also get stream of tokens
+                        stream=stream
                     )
                 else:
                     response = OllamaAPI().generate_response(
@@ -171,8 +171,16 @@ def chat_view(request, branch_id=None):
             return redirect('chat_detail', branch_id=branch_id)
 
         if branch_id:
-            selected_branch = get_object_or_404(ChatBranch, id=branch_id, user=user)
-            chat_messages = ChatMessage.objects.filter(chat_branch=selected_branch).order_by('timestamp')
+            try:
+                selected_branch = get_object_or_404(ChatBranch, id=branch_id, user=user)
+                chat_messages = ChatMessage.objects.filter(chat_branch=selected_branch).order_by('timestamp')
+            except Exception as error:
+                if 'does not exist' in str(error):
+                    messages.error(request, "Chat not found")
+                    return redirect('chat_home')
+                else:
+                    messages.error(request, f"Error: {error}")
+                    return redirect('chat_home')
 
         return render(request, 'chat/chat.html', {
             'branches': branches,
