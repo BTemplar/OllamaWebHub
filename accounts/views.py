@@ -1,8 +1,11 @@
-# -*- encoding: utf-8 -*-
+# -*- coding: utf-8 -*-
 
-from django.shortcuts import render, redirect
-from django.contrib.auth import authenticate, login
-from .forms import LoginForm, SignUpForm
+from django.shortcuts import render
+from django.shortcuts import redirect
+from django.contrib.auth import authenticate
+from django.contrib.auth import login
+from .forms import LoginForm
+from .forms import SignUpForm
 
 
 def login_view(request):

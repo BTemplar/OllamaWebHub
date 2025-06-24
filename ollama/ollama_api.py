@@ -20,7 +20,7 @@ class OllamaAPI:
                 timeout=30
             )
             response.raise_for_status()
-            return response.json()['version']
+            return response.json()["version"]
         except requests.exceptions.RequestException as e:
             print(f"Error getting version: {e}")
             return None
@@ -38,9 +38,9 @@ class OllamaAPI:
             dict: JSON response if successful, None otherwise.
         """
         params = {
-            'name': model_name,
-            'insecure': insecure,
-            'stream': stream
+            "name": model_name,
+            "insecure": insecure,
+            "stream": stream
         }
 
         try:
@@ -68,9 +68,9 @@ class OllamaAPI:
             dict: JSON response if successful, None otherwise.
         """
         params = {
-            'model': model_name,
-            'insecure': insecure,
-            'stream': stream
+            "model": model_name,
+            "insecure": insecure,
+            "stream": stream
         }
 
         try:
@@ -97,14 +97,14 @@ class OllamaAPI:
             dict: JSON response if successful, None otherwise.
         """
         data = {
-            'model': model_name,
-            'files': json.dumps(files)
+            "model": model_name,
+            "files": files
         }
 
         try:
             response = requests.post(
                 f"{self.api_url}/create",
-                data=data,
+                json=data,
                 timeout=30
             )
             response.raise_for_status()
@@ -171,7 +171,7 @@ class OllamaAPI:
             )
             response.raise_for_status()
 
-            if not data.get('stream', False):
+            if not data.get("stream", False):
                 return response.json()
 
             def stream_generator():
@@ -202,29 +202,29 @@ class OllamaAPI:
             Union[dict, Generator]: JSON response or generator if streaming.
         """
         options = {
-            'temperature': kwargs.get('temperature', 1.0),
-            'top_p': kwargs.get('top_p', 1.0),
-            'top_k': kwargs.get('top_k', 50),
-            'repeat_penalty': kwargs.get('repeat_penalty', 1.0),
-            'num_ctx': kwargs.get('num_ctx', 2048)
+            "temperature": kwargs.get("temperature", 1.0),
+            "top_p": kwargs.get("top_p", 1.0),
+            "top_k": kwargs.get("top_k", 50),
+            "repeat_penalty": kwargs.get("repeat_penalty", 1.0),
+            "num_ctx": kwargs.get("num_ctx", 2048)
         }
 
         data = {
-            'model': model_name,
-            'messages': messages,
-            'think': kwargs.get('think', True),
-            'stream': kwargs.get('stream', False),
+            "model": model_name,
+            "messages": messages,
+            "think": kwargs.get("think", True),
+            "stream": kwargs.get("stream", False),
             **options
         }
 
-        if kwargs.get('system_prompt'):
+        if kwargs.get("system_prompt"):
             system_message = {
-                'role': 'system',
-                'content': kwargs['system_prompt']
+                "role": "system",
+                "content": kwargs["system_prompt"]
             }
-            data['messages'].append(system_message)
+            data["messages"].append(system_message)
 
-        return self._generate_response('generate', data)
+        return self._generate_response("generate", data)
 
     def chat(self, model_name, messages, **kwargs):
         """
@@ -239,26 +239,26 @@ class OllamaAPI:
             Union[dict, Generator]: JSON response or generator if streaming.
         """
         options = {
-            'temperature': kwargs.get('temperature', 1.0),
-            'top_p': kwargs.get('top_p', 1.0),
-            'top_k': kwargs.get('top_k', 50),
-            'repeat_penalty': kwargs.get('repeat_penalty', 1.0),
-            'num_ctx': kwargs.get('num_ctx', 2048)
+            "temperature": kwargs.get("temperature", 1.0),
+            "top_p": kwargs.get("top_p", 1.0),
+            "top_k": kwargs.get("top_k", 50),
+            "repeat_penalty": kwargs.get("repeat_penalty", 1.0),
+            "num_ctx": kwargs.get("num_ctx", 2048)
         }
 
         data = {
-            'model': model_name,
-            'messages': messages,
-            'think': kwargs.get('think', True),
-            'stream': kwargs.get('stream', False),
+            "model": model_name,
+            "messages": messages,
+            "think": kwargs.get("think", True),
+            "stream": kwargs.get("stream", False),
             **options
         }
 
-        if kwargs.get('system_prompt'):
+        if kwargs.get("system_prompt"):
             system_message = {
-                'role': 'system',
-                'content': kwargs['system_prompt']
+                "role": "system",
+                "content": kwargs["system_prompt"]
             }
-            data['messages'].append(system_message)
+            data["messages"].append(system_message)
 
-        return self._generate_response('chat', data)
+        return self._generate_response("chat", data)
