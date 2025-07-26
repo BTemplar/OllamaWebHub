@@ -415,6 +415,7 @@
                                 {% if selected_branch.reasoning == 1 %}
                                     <div class="think-spoiler mb-2">
                                         <!-- Spoiler toggle button -->
+                                        {% if msg.sender == 'assistant' %}
                                         <a class="d-flex align-items-center spoiler-toggle text-decoration-none" 
                                            data-bs-toggle="collapse" 
                                            href="#think-{{ msg.id }}-{{ forloop.counter }}"
@@ -423,6 +424,7 @@
                                             <i class="bi bi-chevron-right toggle-icon me-2" style="color: #0ddabb;"></i>
                                             <span class="small fw-medium" style="color: #0ddabb;">Show model reasoning</span>
                                         </a>
+                                        {% endif %}    
                                         
                                         <!-- Collapsible think content -->
                                         <div class="collapse mt-1" id="think-{{ msg.id }}-{{ forloop.counter }}">

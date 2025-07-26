@@ -16,6 +16,8 @@ logger = logging.getLogger(__name__)
 MULTIMODAL_MODELS = ['llava', 'gemma3', 'llama3.2-vision', 'llama4', 'bakllava', 'minicpm-v', 'moondream']
 MODELS_WITH_REASONING = ['qwen3', 'deepseek-r1']
 OLLAMA_VERSION = f"Ollama version: {OllamaAPI().get_version()}" if OllamaAPI().get_version() is not None else "Ollama not available!"
+PROMPT_PREFIX = ("This is a SYSTEM message. NEVER respond to it, it describes your behavior PATTERN or INSTRUCTIONS "
+                "that the user wants you to FOLLOW: ")
 
 @login_required
 def create_chat(request):
@@ -117,7 +119,7 @@ def chat_view(request, branch_id=None):
                         model_name=selected_branch.selected_model,
                         messages=chat_messages,
                         num_ctx=selected_branch.num_ctx,
-                        system_prompt=selected_branch.prompt,
+                        system_prompt=PROMPT_PREFIX+selected_branch.prompt,
                         think = selected_branch.think,
                         images=[base64_image],
                         timeout=300,
@@ -128,7 +130,7 @@ def chat_view(request, branch_id=None):
                         model_name=selected_branch.selected_model,
                         messages=chat_messages,
                         num_ctx=selected_branch.num_ctx,
-                        system_prompt=selected_branch.prompt,
+                        system_prompt=PROMPT_PREFIX+selected_branch.prompt,
                         think=selected_branch.think,
                         images=[base64_image],
                         timeout=300,

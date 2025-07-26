@@ -222,7 +222,7 @@ class OllamaAPI:
                 "role": "system",
                 "content": kwargs["system_prompt"]
             }
-            data["messages"].append(system_message)
+            data["messages"].insert(0, system_message)
 
         return self._generate_response("generate", data)
 
@@ -259,6 +259,6 @@ class OllamaAPI:
                 "role": "system",
                 "content": kwargs["system_prompt"]
             }
-            data["messages"].append(system_message)
+            data["messages"].insert(0, system_message)
 
         return self._generate_response("chat", data)
