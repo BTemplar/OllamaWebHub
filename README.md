@@ -9,8 +9,14 @@ A web-based chat application built with Django, integrated with the Ollama API f
 - **User Authentication**: Secure login system for personalized chat experiences.
 - **Chat Management**:
   - Create new chat threads with custom names and descriptions.
+  - Setting the context window size.
+  - Setting a prompt for a chat thread.
   - Rename or delete existing chats.
   - View chat history with timestamps.
+  - Support for "thinking" LLM models.
+  - Support for multimodal models.
+  - Code highlighting.
+  - Ability to download code to a file from chat.
 - **AI Integration**:
   - Select from available Ollama models (e.g., `llama3`).
   - Real-time interaction with AI-generated responses.
