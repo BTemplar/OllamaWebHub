@@ -16,7 +16,11 @@ from prometheus_client import Counter, Histogram
 from django_ratelimit.decorators import ratelimit
 from requests.exceptions import ConnectionError, RequestException
 
-from .image_processor import get_validated_image_bytes
+from .image_processor import (
+    delete_branch_chat_images,
+    delete_chat_message_images,
+    get_validated_image_bytes,
+)
 from .models import ChatBranch, ChatMessage
 from .services import (
     build_ollama_messages,
@@ -100,10 +104,10 @@ def _sse_error(message):
 
 
 def _truncate_messages_after(branch, message):
-    removed = list(
-        branch.messages.filter(id__gt=message.id).values_list("id", flat=True)
-    )
-    branch.messages.filter(id__gt=message.id).delete()
+    to_remove = branch.messages.filter(id__gt=message.id)
+    removed = list(to_remove.values_list("id", flat=True))
+    delete_chat_message_images(to_remove)
+    to_remove.delete()
     return removed
 
 
@@ -121,10 +125,10 @@ def _prepare_regeneration(branch, message_id):
         )
         if not user_message:
             return None, [], "No user message found for regeneration"
-        removed_ids = list(
-            branch.messages.filter(id__gte=target.id).values_list("id", flat=True)
-        )
-        branch.messages.filter(id__gte=target.id).delete()
+        to_remove = branch.messages.filter(id__gte=target.id)
+        removed_ids = list(to_remove.values_list("id", flat=True))
+        delete_chat_message_images(to_remove)
+        to_remove.delete()
     else:
         user_message = target
         removed_ids = _truncate_messages_after(branch, target)
@@ -492,7 +496,9 @@ def edit_chat(request, branch_id):
 def delete_chat(request, branch_id):
     branch = get_object_or_404(ChatBranch, id=branch_id, user=request.user)
     model_name = branch.selected_model
+    saved_branch_id = branch.id
     branch.delete()
+    delete_branch_chat_images(saved_branch_id)
     CHAT_REQUESTS.labels(request_type="delete", model=model_name).inc()
     return redirect("chat_home")
 
@@ -505,5 +511,6 @@ def delete_all_messages(request, branch_id):
         request_type="clear_messages",
         model=branch.selected_model,
     ).inc()
+    delete_branch_chat_images(branch.id)
     branch.messages.all().delete()
     return redirect("chat_detail", branch_id=branch.id)

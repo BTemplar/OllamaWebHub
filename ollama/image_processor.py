@@ -1,16 +1,42 @@
 import base64
 import io
+import shutil
 import uuid
 from pathlib import Path
 from typing import Any, Optional
 
 from django.conf import settings
+from django.core.files.storage import default_storage
+from django.db.models import QuerySet
 from PIL import Image
 
 
 def chat_message_image_path(instance, filename: str) -> str:
     ext = Path(filename).suffix.lower() or ".png"
     return f"chat_images/branch_{instance.chat_branch_id}/{uuid.uuid4().hex}{ext}"
+
+
+def branch_chat_images_dir(branch_id: int) -> Path:
+    return Path(settings.MEDIA_ROOT) / "chat_images" / f"branch_{branch_id}"
+
+
+def delete_stored_chat_image(image_name: str) -> None:
+    if image_name:
+        default_storage.delete(image_name)
+
+
+def delete_chat_message_images(messages: QuerySet) -> None:
+    image_names = messages.exclude(image="").exclude(image__isnull=True).values_list(
+        "image", flat=True
+    )
+    for image_name in image_names:
+        delete_stored_chat_image(image_name)
+
+
+def delete_branch_chat_images(branch_id: int) -> None:
+    branch_dir = branch_chat_images_dir(branch_id)
+    if branch_dir.is_dir():
+        shutil.rmtree(branch_dir)
 
 
 def _max_image_size() -> int:
