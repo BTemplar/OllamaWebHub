@@ -1,7 +1,9 @@
 import logging
+from typing import Any, Iterator, Optional
 
 from django.conf import settings
 from django.core.cache import cache
+from django.db.models import QuerySet
 
 from ollama.image_processor import image_field_to_base64
 from ollama.models import ChatBranch, ChatMessage
@@ -15,7 +17,13 @@ PROMPT_PREFIX = (
 )
 
 
-def get_available_models():
+def get_available_models() -> list[str]:
+    """
+    Return cached Ollama model names, excluding embedding models.
+
+    Returns:
+        list[str]: Available model names from the Ollama server.
+    """
     cache_key = "ollama_available_models"
     cached = cache.get(cache_key)
     if cached is not None:
@@ -34,11 +42,26 @@ def get_available_models():
     return models
 
 
-def _model_base_name(model_name):
+def _model_base_name(model_name: str) -> str:
+    """
+    Extract the base model name without tag suffix.
+
+    Args:
+        model_name (str): Full Ollama model name, e.g. ``llama3:latest``.
+
+    Returns:
+        str: Lowercased base model name.
+    """
     return model_name.split(":", 1)[0].lower()
 
 
-def _get_model_capability_lists():
+def _get_model_capability_lists() -> dict[str, list[str]]:
+    """
+    Build cached lists of multimodal and reasoning-capable model base names.
+
+    Returns:
+        dict[str, list[str]]: Keys ``multimodal`` and ``reasoning``.
+    """
     cache_key = "ollama_model_capabilities"
     cached = cache.get(cache_key)
     if cached is not None:
@@ -68,15 +91,39 @@ def _get_model_capability_lists():
     return result
 
 
-def get_multimodal_models():
+def get_multimodal_models() -> list[str]:
+    """
+    Return base names of models that support vision input.
+
+    Returns:
+        list[str]: Multimodal-capable model base names.
+    """
     return _get_model_capability_lists()["multimodal"]
 
 
-def get_models_with_reasoning():
+def get_models_with_reasoning() -> list[str]:
+    """
+    Return base names of models that support thinking/reasoning output.
+
+    Returns:
+        list[str]: Reasoning-capable model base names.
+    """
     return _get_model_capability_lists()["reasoning"]
 
 
-def build_ollama_messages(queryset, max_messages=None):
+def build_ollama_messages(
+    queryset: QuerySet[ChatMessage], max_messages: Optional[int] = None
+) -> list[dict[str, Any]]:
+    """
+    Convert stored chat messages into Ollama API message payloads.
+
+    Args:
+        queryset (QuerySet[ChatMessage]): Branch messages queryset.
+        max_messages (Optional[int]): History limit; defaults to settings value.
+
+    Returns:
+        list[dict[str, Any]]: Messages with roles, content, and optional images.
+    """
     max_messages = max_messages or settings.CHAT_MAX_CONTEXT_MESSAGES
     history = list(
         queryset.order_by("-timestamp")[:max_messages].only(
@@ -94,14 +141,23 @@ def build_ollama_messages(queryset, max_messages=None):
             if msg.sender == ChatMessage.Sender.ASSISTANT
             else msg.sender
         )
-        entry = {"role": role, "content": msg.message}
+        entry: dict[str, Any] = {"role": role, "content": msg.message}
         if msg.image:
             entry["images"] = [image_field_to_base64(msg.image)]
         messages.append(entry)
     return messages
 
 
-def get_api_kwargs(branch):
+def get_api_kwargs(branch: ChatBranch) -> dict[str, Any]:
+    """
+    Build keyword arguments passed to the Ollama API client.
+
+    Args:
+        branch (ChatBranch): Chat branch with generation settings.
+
+    Returns:
+        dict[str, Any]: API options such as temperature, context size, and think flag.
+    """
     return {
         "num_ctx": branch.num_ctx,
         "temperature": branch.temperature,
@@ -111,7 +167,19 @@ def get_api_kwargs(branch):
     }
 
 
-def iter_ollama_response(branch, ollama_messages):
+def iter_ollama_response(
+    branch: ChatBranch, ollama_messages: list[dict[str, Any]]
+) -> Iterator[dict[str, str]]:
+    """
+    Stream normalized content and thinking chunks from Ollama.
+
+    Args:
+        branch (ChatBranch): Chat branch with model and request settings.
+        ollama_messages (list[dict[str, Any]]): Prepared Ollama message history.
+
+    Yields:
+        dict[str, str]: Chunk dictionaries with ``type`` and ``text`` keys.
+    """
     client = get_ollama_client()
     api_kwargs = get_api_kwargs(branch)
     if branch.request_type == ChatBranch.RequestType.CHAT:
@@ -146,7 +214,19 @@ def iter_ollama_response(branch, ollama_messages):
         response.close()
 
 
-def collect_ollama_response(branch, ollama_messages):
+def collect_ollama_response(
+    branch: ChatBranch, ollama_messages: list[dict[str, Any]]
+) -> tuple[str, str]:
+    """
+    Collect a full non-streaming assistant reply from Ollama.
+
+    Args:
+        branch (ChatBranch): Chat branch with model and request settings.
+        ollama_messages (list[dict[str, Any]]): Prepared Ollama message history.
+
+    Returns:
+        tuple[str, str]: Assistant content and thinking text.
+    """
     client = get_ollama_client()
     api_kwargs = get_api_kwargs(branch)
     if branch.request_type == ChatBranch.RequestType.CHAT:

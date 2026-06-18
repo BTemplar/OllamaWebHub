@@ -4,45 +4,63 @@ Django chat application integrated with the [Ollama](https://ollama.com/) API. U
 
 ## Features
 
-- User authentication (login / register)
-- Create, edit, and delete chat threads (model, prompt, temperature, stream vs one-time response, etc.)
-- Ollama integration: model list, chat and generate modes, streaming (aggregated server-side)
-- Multimodal chats for vision models
-- Reasoning / thinking display for supported models
-- Markdown rendering with syntax highlighting
-- Real-time SSE streaming of assistant responses in the chat UI
+### Authentication & access
+- User login and logout
+- Optional public registration (`REGISTRATION_ENABLED`)
+- Per-user chat isolation
+
+### Chat management
+- Create, edit, and delete chat threads
+- System prompt, temperature, context window (`num_ctx`), and model selection per thread
+- Request mode: multi-turn **Chat** or single **Response**
+- Response delivery: **Stream** (token-by-token) or **One-time** (full reply)
+- Clear all messages in a thread without deleting the thread itself
+
+### Ollama integration
+- Model list from the Ollama server (cached, embedding models excluded)
+- Ollama connection status shown in the UI
+- Automatic model capability detection (vision / multimodal, reasoning)
+- Chat and generate API modes
+- Configurable context limit (`CHAT_MAX_CONTEXT_MESSAGES`)
+
+### Multimodal & reasoning
+- Image uploads for vision-capable models (validated with Pillow, size-limited)
+- Images stored on disk under `media/chat_images/` and sent to Ollama as base64
+- Automatic cleanup of image files when messages or threads are deleted
+- Optional thinking / reasoning for supported models
+- Collapsible reasoning blocks in the chat UI
+
+### Chat UI
+- Real-time SSE streaming of assistant responses
 - Stop generation mid-stream
 - Edit user messages with automatic regeneration
 - Regenerate assistant or user messages
-- Prometheus metrics at `/metrics`
+- Markdown rendering with syntax highlighting (Pygments)
+- Copy and download buttons for code blocks
+- Expandable fullscreen chat layout
 
-- **User Authentication**: Secure login system for personalized chat experiences.
-- **Chat Management**:
-  - Create new chat threads with custom names and descriptions.
-  - Setting the context window size.
-  - Setting a prompt for a chat thread.
-  - Rename or delete existing chats.
-  - View chat history with timestamps.
-  - Support for "thinking" LLM models.
-  - Support for multimodal models.
-  - Code highlighting.
-  - Ability to download code to a file from chat.
-- **AI Integration**:
-  - Select from available Ollama models (e.g., `llama3`).
-  - Real-time interaction with AI-generated responses.
-  - Error handling for API connectivity issues.
-- **Message History**: Persistent storage of all user and AI messages.
-- **Ollama Status**: Display available models and Ollama server version.
+### Operations
+- Prometheus metrics at `/metrics` (IP-restricted when `DEBUG=False`)
+- Rate limiting on the stream endpoint (`CHAT_STREAM_RATE`)
+- Production-oriented security headers when `DEBUG=False`
 
-- Django 5.2
-- SQLite (default)
-- Ollama API
-- Bootstrap 5
+## Stack
+
+| Component | Technology |
+|-----------|------------|
+| Backend | Django 5.2 |
+| Database | SQLite (default) |
+| LLM API | Ollama REST API |
+| Images | Pillow |
+| Markdown | Markdown + Pygments |
+| UI | Bootstrap 5, vanilla JavaScript |
+| Metrics | django-prometheus |
+| Rate limiting | django-ratelimit |
 
 ## Prerequisites
 
 - Python 3.12+
-- Ollama server running locally or remotely
+- Ollama server running locally or on a remote host
 
 ## Installation
 
@@ -55,7 +73,9 @@ python -m venv .venv
 # source .venv/bin/activate   # Linux / macOS
 
 pip install -r requirements.txt
-cp .env.example .env            # then edit values
+copy .env.example .env        # Windows: copy | Linux/macOS: cp
+# Edit .env with your values
+
 python manage.py migrate
 python manage.py createsuperuser
 python manage.py runserver
@@ -65,19 +85,22 @@ Open http://localhost:8000
 
 ## Configuration
 
-Copy `.env.example` to `.env`:
+Copy `.env.example` to `.env` and adjust as needed:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `SECRET_KEY` | Django secret key | dev placeholder |
 | `DEBUG` | Debug mode | `True` |
 | `ALLOWED_HOSTS` | Comma-separated hosts | `localhost,127.0.0.1` |
+| `REGISTRATION_ENABLED` | Allow public user sign-up | `True` |
 | `OLLAMA_API_URL` | Ollama API base URL | `http://localhost:11434/api` |
-| `CHAT_MAX_CONTEXT_MESSAGES` | Messages sent to Ollama | `50` |
+| `CHAT_MAX_CONTEXT_MESSAGES` | Max messages sent to Ollama per request | `50` |
 | `CHAT_MAX_IMAGE_SIZE_BYTES` | Max upload size for chat images | `10485760` (10 MB) |
-| `CHAT_STREAM_RATE` | Rate limit for stream endpoint (per user) | `30/m` |
-| `OLLAMA_MODELS_CACHE_SECONDS` | Model list cache TTL | `60` |
-| `METRICS_ALLOWED_IPS` | IPs allowed to scrape metrics in production | `127.0.0.1` |
+| `CHAT_STREAM_RATE` | Rate limit for the stream endpoint (per user) | `30/m` |
+| `OLLAMA_MODELS_CACHE_SECONDS` | TTL for cached model list and Ollama status | `60` |
+| `METRICS_ALLOWED_IPS` | IPs allowed to scrape `/metrics` when `DEBUG=False` | `127.0.0.1` |
+
+When `DEBUG=False`, set a strong `SECRET_KEY`, configure `ALLOWED_HOSTS`, and restrict `METRICS_ALLOWED_IPS` to your Prometheus scraper. With an empty `METRICS_ALLOWED_IPS` list, metrics remain open only while `DEBUG=True`.
 
 ## Ollama setup
 
@@ -86,16 +109,32 @@ ollama pull llama3
 ollama serve
 ```
 
+For vision models, pull a multimodal model (for example `llava`) and enable **Multimodal** when creating or editing a chat. For reasoning models, enable **Reasoning enabled** and optionally **Show reasoning in UI**.
+
+## Running tests
+
+```bash
+python manage.py test ollama
+```
+
 ## Project structure
 
 ```
 .
-├── accounts/          # Authentication
-├── core/              # Django project settings
-├── ollama/            # Chat app, Ollama client, services
-├── templates/         # HTML templates
-├── static/            # Static assets
-├── .env.example       # Environment template
+├── accounts/              # Login, registration, auth context
+├── core/                  # Django settings, URLs, metrics view
+├── ollama/                # Chat app
+│   ├── image_processor.py # Image validation, storage paths, cleanup
+│   ├── ollama_api.py      # Ollama HTTP client
+│   ├── services.py        # Model cache, message building, streaming
+│   ├── sse.py             # Server-Sent Events helpers
+│   ├── signals.py         # Image file cleanup on message delete
+│   ├── views.py           # Chat UI and stream endpoint
+│   └── tests.py           # Image processor unit tests
+├── templates/             # HTML templates (chat, accounts)
+├── static/                # CSS and JavaScript (chat UI, modals, uploads)
+├── media/                 # Uploaded chat images (created at runtime)
+├── .env.example           # Environment template
 └── manage.py
 ```
 

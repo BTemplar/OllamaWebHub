@@ -1,8 +1,20 @@
-from django.core.cache import cache
+from typing import Any
+
 from django.conf import settings
+from django.core.cache import cache
+from django.http import HttpRequest
 
 
-def ollama_status(request):
+def ollama_status(request: HttpRequest) -> dict[str, Any]:
+    """
+    Provide cached Ollama server availability text for templates.
+
+    Args:
+        request (HttpRequest): Current HTTP request.
+
+    Returns:
+        dict[str, Any]: Template context with ``ollama_version`` label.
+    """
     cache_key = "ollama_version_label"
     version_label = cache.get(cache_key)
     if version_label is None:

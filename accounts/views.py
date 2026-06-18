@@ -2,13 +2,22 @@
 
 from django.conf import settings
 from django.contrib.auth import authenticate, login
-from django.http import Http404
+from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 
 from .forms import LoginForm, SignUpForm
 
 
-def login_view(request):
+def login_view(request: HttpRequest) -> HttpResponse:
+    """
+    Display the login form and authenticate the user.
+
+    Args:
+        request (HttpRequest): Current HTTP request.
+
+    Returns:
+        HttpResponse: Redirect to chat home on success or rendered login page.
+    """
     if request.user.is_authenticated:
         return redirect("chat_home")
 
@@ -31,7 +40,19 @@ def login_view(request):
     return render(request, "accounts/login.html", {"form": form, "msg": msg})
 
 
-def register_user(request):
+def register_user(request: HttpRequest) -> HttpResponse:
+    """
+    Register a new user when public registration is enabled.
+
+    Args:
+        request (HttpRequest): Current HTTP request.
+
+    Returns:
+        HttpResponse: Redirect on success, rendered registration page, or 404.
+
+    Raises:
+        Http404: If public registration is disabled in settings.
+    """
     if not settings.REGISTRATION_ENABLED:
         raise Http404()
 

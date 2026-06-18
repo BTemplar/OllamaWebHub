@@ -1,19 +1,20 @@
 import logging
 import time
 from pathlib import Path
+from typing import Any, Iterator, Optional
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.conf import settings
 from django.core.files.base import ContentFile
 from django.db import close_old_connections
-from django.db.models import Count
-from django.http import StreamingHttpResponse
+from django.db.models import Count, QuerySet
+from django.http import HttpRequest, HttpResponse, StreamingHttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
-from prometheus_client import Counter, Histogram
 from django_ratelimit.decorators import ratelimit
+from prometheus_client import Counter, Histogram
 from requests.exceptions import ConnectionError, RequestException
 
 from .image_processor import (
@@ -60,11 +61,31 @@ STOPPED_SUFFIX = "\n\n*[generation stopped]*"
 RATE_LIMIT_MESSAGE = "Too many requests. Please wait a moment and try again."
 
 
-def _checkbox_enabled(post, name):
+def _checkbox_enabled(post: Any, name: str) -> bool:
+    """
+    Interpret a checkbox value from POST data.
+
+    Args:
+        post: Request POST mapping.
+        name (str): Form field name.
+
+    Returns:
+        bool: True when the field value equals ``True``.
+    """
     return post.get(name) == "True"
 
 
-def _apply_branch_from_post(branch, post):
+def _apply_branch_from_post(branch: ChatBranch, post: Any) -> None:
+    """
+    Update a chat branch from submitted form data.
+
+    Args:
+        branch (ChatBranch): Branch instance to update.
+        post: Request POST mapping.
+
+    Raises:
+        ValueError: If the chat name is empty or numeric fields are invalid.
+    """
     name = post.get("name", "").strip()
     if not name:
         raise ValueError("Chat name cannot be empty")
@@ -83,7 +104,16 @@ def _apply_branch_from_post(branch, post):
     branch.num_ctx = int(post.get("num_ctx", branch.num_ctx))
 
 
-def _user_message_payload(message):
+def _user_message_payload(message: ChatMessage) -> dict[str, Any]:
+    """
+    Build a JSON-serializable payload for a user message SSE event.
+
+    Args:
+        message (ChatMessage): User message instance.
+
+    Returns:
+        dict[str, Any]: Message id, content, timestamp, and optional image URL.
+    """
     image_url = message.image.url if message.image else None
     return {
         "id": message.id,
@@ -93,7 +123,16 @@ def _user_message_payload(message):
     }
 
 
-def _sse_error(message):
+def _sse_error(message: str) -> StreamingHttpResponse:
+    """
+    Return a single-event SSE response containing an error payload.
+
+    Args:
+        message (str): Error text for the client.
+
+    Returns:
+        StreamingHttpResponse: SSE response with cache-busting headers.
+    """
     response = StreamingHttpResponse(
         iter([format_sse("error", {"message": message})]),
         content_type="text/event-stream",
@@ -103,7 +142,17 @@ def _sse_error(message):
     return response
 
 
-def _truncate_messages_after(branch, message):
+def _truncate_messages_after(branch: ChatBranch, message: ChatMessage) -> list[int]:
+    """
+    Delete messages after the given point and remove their stored images.
+
+    Args:
+        branch (ChatBranch): Chat branch owning the messages.
+        message (ChatMessage): Last message that should remain in history.
+
+    Returns:
+        list[int]: Primary keys of removed messages.
+    """
     to_remove = branch.messages.filter(id__gt=message.id)
     removed = list(to_remove.values_list("id", flat=True))
     delete_chat_message_images(to_remove)
@@ -111,7 +160,20 @@ def _truncate_messages_after(branch, message):
     return removed
 
 
-def _prepare_regeneration(branch, message_id):
+def _prepare_regeneration(
+    branch: ChatBranch, message_id: int
+) -> tuple[Optional[ChatMessage], list[int], Optional[str]]:
+    """
+    Prepare history for regenerating from a user or assistant message.
+
+    Args:
+        branch (ChatBranch): Chat branch owning the messages.
+        message_id (int): Message id to regenerate from.
+
+    Returns:
+        tuple[Optional[ChatMessage], list[int], Optional[str]]:
+            User message to answer, removed message ids, and optional error text.
+    """
     target = get_object_or_404(ChatMessage, id=message_id, chat_branch=branch)
 
     if target.sender == ChatMessage.Sender.SYSTEM:
@@ -136,7 +198,21 @@ def _prepare_regeneration(branch, message_id):
     return user_message, removed_ids, None
 
 
-def _prepare_edit_and_regenerate(branch, message_id, new_content):
+def _prepare_edit_and_regenerate(
+    branch: ChatBranch, message_id: int, new_content: str
+) -> tuple[Optional[ChatMessage], list[int], Optional[str]]:
+    """
+    Update a user message and truncate subsequent history.
+
+    Args:
+        branch (ChatBranch): Chat branch owning the messages.
+        message_id (int): User message id to edit.
+        new_content (str): Replacement message text.
+
+    Returns:
+        tuple[Optional[ChatMessage], list[int], Optional[str]]:
+            Updated user message, removed message ids, and optional error text.
+    """
     target = get_object_or_404(
         ChatMessage,
         id=message_id,
@@ -153,7 +229,20 @@ def _prepare_edit_and_regenerate(branch, message_id, new_content):
     return target, removed_ids, None
 
 
-def _parse_message_submission(request, branch):
+def _parse_message_submission(
+    request: HttpRequest, branch: ChatBranch
+) -> tuple[Optional[ChatMessage], Optional[str]]:
+    """
+    Create a new user message from a POST submission.
+
+    Args:
+        request (HttpRequest): Current HTTP request.
+        branch (ChatBranch): Chat branch receiving the message.
+
+    Returns:
+        tuple[Optional[ChatMessage], Optional[str]]:
+            Created user message and optional validation error text.
+    """
     message_text = request.POST.get("message", "").strip()
     img_file = request.FILES.get("image")
     has_image = img_file is not None
@@ -187,7 +276,20 @@ def _parse_message_submission(request, branch):
     return user_message, None
 
 
-def _resolve_stream_request(request, branch):
+def _resolve_stream_request(
+    request: HttpRequest, branch: ChatBranch
+) -> tuple[Optional[ChatMessage], list[int], Optional[str], Optional[str]]:
+    """
+    Resolve the user message and stream preamble for an SSE request.
+
+    Args:
+        request (HttpRequest): Current HTTP request.
+        branch (ChatBranch): Chat branch receiving the message.
+
+    Returns:
+        tuple[Optional[ChatMessage], list[int], Optional[str], Optional[str]]:
+            User message, removed ids, lead SSE event name, and optional error.
+    """
     edit_id = request.POST.get("edit_message_id")
     regenerate_id = request.POST.get("regenerate_message_id")
 
@@ -214,7 +316,22 @@ def _resolve_stream_request(request, branch):
     return user_message, [], "user_message", None
 
 
-def _yield_lead_events(user_message, removed_ids, lead_event):
+def _yield_lead_events(
+    user_message: ChatMessage,
+    removed_ids: list[int],
+    lead_event: Optional[str],
+) -> Iterator[str]:
+    """
+    Yield initial SSE events before assistant generation starts.
+
+    Args:
+        user_message (ChatMessage): User message included in lead events.
+        removed_ids (list[int]): Truncated message ids, if any.
+        lead_event (Optional[str]): Lead event name for the user message.
+
+    Yields:
+        str: Formatted SSE event payloads.
+    """
     if removed_ids:
         yield format_sse("truncated", {"removed_ids": removed_ids})
     if lead_event == "user_message":
@@ -223,7 +340,20 @@ def _yield_lead_events(user_message, removed_ids, lead_event):
         yield format_sse("message_updated", _user_message_payload(user_message))
 
 
-def _save_assistant_reply(branch, full_content, full_thinking):
+def _save_assistant_reply(
+    branch: ChatBranch, full_content: str, full_thinking: str
+) -> ChatMessage:
+    """
+    Persist a completed assistant reply.
+
+    Args:
+        branch (ChatBranch): Chat branch receiving the reply.
+        full_content (str): Assistant message text.
+        full_thinking (str): Assistant reasoning text.
+
+    Returns:
+        ChatMessage: Saved assistant message instance.
+    """
     assistant = ChatMessage.objects.create(
         chat_branch=branch,
         sender=ChatMessage.Sender.ASSISTANT,
@@ -234,7 +364,14 @@ def _save_assistant_reply(branch, full_content, full_thinking):
     return assistant
 
 
-def _record_request_metrics(branch, start_time):
+def _record_request_metrics(branch: ChatBranch, start_time: float) -> None:
+    """
+    Record Prometheus metrics for a completed chat request.
+
+    Args:
+        branch (ChatBranch): Chat branch used for the request.
+        start_time (float): Monotonic start timestamp from ``time.time()``.
+    """
     REQUEST_DURATION.labels(
         request_type=branch.request_type,
         model=branch.selected_model,
@@ -245,13 +382,30 @@ def _record_request_metrics(branch, start_time):
     ).inc()
 
 
-def _streaming_assistant_reply(branch, user_message, removed_ids=None, lead_event=None):
+def _streaming_assistant_reply(
+    branch: ChatBranch,
+    user_message: ChatMessage,
+    removed_ids: Optional[list[int]] = None,
+    lead_event: Optional[str] = None,
+) -> Iterator[str]:
+    """
+    Stream assistant output from Ollama and persist the final reply.
+
+    Args:
+        branch (ChatBranch): Chat branch with generation settings.
+        user_message (ChatMessage): User message being answered.
+        removed_ids (Optional[list[int]]): Truncated message ids for lead events.
+        lead_event (Optional[str]): Lead SSE event name for the user message.
+
+    Yields:
+        str: Formatted SSE event payloads.
+    """
     close_old_connections()
     start_time = time.time()
-    content_parts = []
-    thinking_parts = []
+    content_parts: list[str] = []
+    thinking_parts: list[str] = []
 
-    yield from _yield_lead_events(user_message, removed_ids, lead_event)
+    yield from _yield_lead_events(user_message, removed_ids or [], lead_event)
     ollama_messages = build_ollama_messages(branch.messages)
 
     try:
@@ -327,11 +481,28 @@ def _streaming_assistant_reply(branch, user_message, removed_ids=None, lead_even
         close_old_connections()
 
 
-def _onetime_assistant_reply(branch, user_message, removed_ids=None, lead_event=None):
+def _onetime_assistant_reply(
+    branch: ChatBranch,
+    user_message: ChatMessage,
+    removed_ids: Optional[list[int]] = None,
+    lead_event: Optional[str] = None,
+) -> Iterator[str]:
+    """
+    Generate a one-shot assistant reply and emit it over SSE.
+
+    Args:
+        branch (ChatBranch): Chat branch with generation settings.
+        user_message (ChatMessage): User message being answered.
+        removed_ids (Optional[list[int]]): Truncated message ids for lead events.
+        lead_event (Optional[str]): Lead SSE event name for the user message.
+
+    Yields:
+        str: Formatted SSE event payloads.
+    """
     close_old_connections()
     start_time = time.time()
 
-    yield from _yield_lead_events(user_message, removed_ids, lead_event)
+    yield from _yield_lead_events(user_message, removed_ids or [], lead_event)
     yield format_sse("generating", {})
     ollama_messages = build_ollama_messages(branch.messages)
 
@@ -389,7 +560,24 @@ def _onetime_assistant_reply(branch, user_message, removed_ids=None, lead_event=
         close_old_connections()
 
 
-def _stream_assistant_reply(branch, user_message, removed_ids=None, lead_event=None):
+def _stream_assistant_reply(
+    branch: ChatBranch,
+    user_message: ChatMessage,
+    removed_ids: Optional[list[int]] = None,
+    lead_event: Optional[str] = None,
+) -> Iterator[str]:
+    """
+    Dispatch to streaming or one-time assistant generation based on branch settings.
+
+    Args:
+        branch (ChatBranch): Chat branch with generation settings.
+        user_message (ChatMessage): User message being answered.
+        removed_ids (Optional[list[int]]): Truncated message ids for lead events.
+        lead_event (Optional[str]): Lead SSE event name for the user message.
+
+    Yields:
+        str: Formatted SSE event payloads.
+    """
     if branch.response_type == ChatBranch.ResponseType.ONETIME:
         yield from _onetime_assistant_reply(
             branch, user_message, removed_ids=removed_ids, lead_event=lead_event
@@ -401,7 +589,16 @@ def _stream_assistant_reply(branch, user_message, removed_ids=None, lead_event=N
 
 
 @login_required
-def create_chat(request):
+def create_chat(request: HttpRequest) -> HttpResponse:
+    """
+    Create a new chat branch from submitted settings.
+
+    Args:
+        request (HttpRequest): Current HTTP request.
+
+    Returns:
+        HttpResponse: Redirect to the new chat or back to chat home on error.
+    """
     if request.method != "POST":
         return redirect("chat_home")
 
@@ -419,7 +616,17 @@ def create_chat(request):
 
 
 @login_required
-def chat_view(request, branch_id=None):
+def chat_view(request: HttpRequest, branch_id: Optional[int] = None) -> HttpResponse:
+    """
+    Render the chat page with branch list and optional selected conversation.
+
+    Args:
+        request (HttpRequest): Current HTTP request.
+        branch_id (Optional[int]): Selected chat branch id.
+
+    Returns:
+        HttpResponse: Rendered chat page.
+    """
     user = request.user
     today = timezone.now().date()
     available_models = get_available_models()
@@ -427,7 +634,7 @@ def chat_view(request, branch_id=None):
         message_count=Count("messages")
     )
     selected_branch = None
-    chat_messages = []
+    chat_messages: QuerySet[ChatMessage] | list[ChatMessage] = []
 
     if branch_id:
         selected_branch = get_object_or_404(ChatBranch, id=branch_id, user=user)
@@ -451,7 +658,17 @@ def chat_view(request, branch_id=None):
 @require_POST
 @login_required
 @ratelimit(key="user", rate=settings.CHAT_STREAM_RATE, method="POST", block=False)
-def stream_message(request, branch_id):
+def stream_message(request: HttpRequest, branch_id: int) -> HttpResponse:
+    """
+    Accept a chat action and stream the assistant reply over SSE.
+
+    Args:
+        request (HttpRequest): Current HTTP request.
+        branch_id (int): Chat branch id.
+
+    Returns:
+        HttpResponse: SSE stream or single-event SSE error response.
+    """
     if getattr(request, "limited", False):
         return _sse_error(RATE_LIMIT_MESSAGE)
 
@@ -478,7 +695,17 @@ def stream_message(request, branch_id):
 
 @require_POST
 @login_required
-def edit_chat(request, branch_id):
+def edit_chat(request: HttpRequest, branch_id: int) -> HttpResponse:
+    """
+    Update chat branch settings from submitted form data.
+
+    Args:
+        request (HttpRequest): Current HTTP request.
+        branch_id (int): Chat branch id.
+
+    Returns:
+        HttpResponse: Redirect back to the edited chat.
+    """
     branch = get_object_or_404(ChatBranch, id=branch_id, user=request.user)
     try:
         _apply_branch_from_post(branch, request.POST)
@@ -493,7 +720,17 @@ def edit_chat(request, branch_id):
 
 @require_POST
 @login_required
-def delete_chat(request, branch_id):
+def delete_chat(request: HttpRequest, branch_id: int) -> HttpResponse:
+    """
+    Delete a chat branch and its stored image files.
+
+    Args:
+        request (HttpRequest): Current HTTP request.
+        branch_id (int): Chat branch id.
+
+    Returns:
+        HttpResponse: Redirect to chat home.
+    """
     branch = get_object_or_404(ChatBranch, id=branch_id, user=request.user)
     model_name = branch.selected_model
     saved_branch_id = branch.id
@@ -505,7 +742,17 @@ def delete_chat(request, branch_id):
 
 @require_POST
 @login_required
-def delete_all_messages(request, branch_id):
+def delete_all_messages(request: HttpRequest, branch_id: int) -> HttpResponse:
+    """
+    Clear all messages and image files from a chat branch.
+
+    Args:
+        request (HttpRequest): Current HTTP request.
+        branch_id (int): Chat branch id.
+
+    Returns:
+        HttpResponse: Redirect back to the chat.
+    """
     branch = get_object_or_404(ChatBranch, id=branch_id, user=request.user)
     CHAT_REQUESTS.labels(
         request_type="clear_messages",
