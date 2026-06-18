@@ -1,5 +1,7 @@
-from django.db import models
 from django.contrib.auth.models import User
+from django.db import models
+
+from ollama.image_processor import chat_message_image_path
 
 
 class ChatBranch(models.Model):
@@ -41,17 +43,17 @@ class ChatBranch(models.Model):
     response_type = models.CharField(
         max_length=2,
         choices=ResponseType.choices,
-        default=ResponseType.ONETIME,
+        default=ResponseType.STREAM,
     )
-    selected_model = models.CharField(
-        max_length=90,
-        default="llama3:latest",
-    )
+    selected_model = models.CharField(max_length=90, default="llama3:latest")
     temperature = models.FloatField(default=0.7)
     multimodal = models.BooleanField(default=False)
     think = models.BooleanField(default=False)
     reasoning = models.BooleanField(default=False)
     num_ctx = models.IntegerField(default=2048)
+
+    class Meta:
+        ordering = ["-id"]
 
     def __str__(self):
         return self.name
@@ -70,14 +72,30 @@ class ChatMessage(models.Model):
         image_base64 (str): The base64 representation of the image for the chat message.
         timestamp (datetime): The timestamp of the chat message.
     """
+    class Sender(models.TextChoices):
+        USER = "user", "User"
+        ASSISTANT = "assistant", "Assistant"
+        SYSTEM = "system", "System"
 
-    chat_branch = models.ForeignKey(ChatBranch, on_delete=models.CASCADE)
-    sender = models.CharField(max_length=9)  # May have three types: "assistant", "user", "system"
+    chat_branch = models.ForeignKey(
+        ChatBranch, on_delete=models.CASCADE, related_name="messages"
+    )
+    sender = models.CharField(max_length=9, choices=Sender.choices)
     message = models.TextField()
     prompt = models.TextField(blank=True, null=True)
-    think = models.TextField()
-    image_base64 = models.TextField(blank=True, null=True)
+    think = models.TextField(blank=True, default="")
+    image = models.ImageField(
+        upload_to=chat_message_image_path,
+        blank=True,
+        null=True,
+    )
     timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["timestamp"]
+        indexes = [
+            models.Index(fields=["chat_branch", "timestamp"]),
+        ]
 
     def __str__(self):
         return f"Message in {self.chat_branch.name} at {self.timestamp}"
