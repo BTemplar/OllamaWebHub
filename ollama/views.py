@@ -19,11 +19,11 @@ from requests.exceptions import ConnectionError, RequestException
 from .image_processor import get_validated_image_bytes
 from .models import ChatBranch, ChatMessage
 from .services import (
-    MODELS_WITH_REASONING,
-    MULTIMODAL_MODELS,
     build_ollama_messages,
     collect_ollama_response,
     get_available_models,
+    get_models_with_reasoning,
+    get_multimodal_models,
     iter_ollama_response,
 )
 from .sse import format_sse
@@ -438,8 +438,8 @@ def chat_view(request, branch_id=None):
             "messages": chat_messages,
             "today": today,
             "models": available_models,
-            "multimodal": MULTIMODAL_MODELS,
-            "reasoning": MODELS_WITH_REASONING,
+            "multimodal": get_multimodal_models(),
+            "reasoning": get_models_with_reasoning(),
         },
     )
 

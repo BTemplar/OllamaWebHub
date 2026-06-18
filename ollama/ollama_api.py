@@ -38,6 +38,19 @@ class OllamaAPI:
             logger.warning("Failed to list Ollama models: %s", exc)
             return None
 
+    def show_model(self, model_name):
+        try:
+            response = requests.post(
+                f"{self.api_url}/show",
+                json={"model": model_name},
+                timeout=10,
+            )
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as exc:
+            logger.warning("Failed to show model %s: %s", model_name, exc)
+            return None
+
     def pull_model(self, model_name, insecure=False, stream=False):
         params = {"name": model_name, "insecure": insecure, "stream": stream}
         try:
