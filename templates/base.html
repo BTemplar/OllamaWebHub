@@ -128,7 +128,7 @@
     <footer class="footer py-3 mt-auto">
         <div class="container text-center">
             <span class="text-muted">
-                © 2025 Ollama WebHub.
+                © 2025{% now "Y" as year %}{% if year != "2025" %}-{{ year }}{% endif %} Ollama WebHub.
             </span>
         </div>
         <div class="container text-center">

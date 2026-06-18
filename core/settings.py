@@ -18,6 +18,12 @@ SECRET_KEY = os.getenv(
 
 DEBUG = os.getenv("DEBUG", "True").lower() in ("true", "1", "yes")
 
+REGISTRATION_ENABLED = os.getenv("REGISTRATION_ENABLED", "True").lower() in (
+    "true",
+    "1",
+    "yes",
+)
+
 ALLOWED_HOSTS = [
     host.strip()
     for host in os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
@@ -83,6 +89,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "ollama.context_processors.ollama_status",
+                "accounts.context_processors.registration_settings",
             ],
         },
     },

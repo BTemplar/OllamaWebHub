@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
+from django.conf import settings
 from django.contrib.auth import authenticate, login
+from django.http import Http404
 from django.shortcuts import redirect, render
 
 from .forms import LoginForm, SignUpForm
@@ -30,6 +32,9 @@ def login_view(request):
 
 
 def register_user(request):
+    if not settings.REGISTRATION_ENABLED:
+        raise Http404()
+
     if request.user.is_authenticated:
         return redirect("chat_home")
 
