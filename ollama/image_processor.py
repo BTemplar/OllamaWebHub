@@ -1,85 +1,63 @@
-from PIL import Image
-import io
 import base64
-from typing import Any
-from ast import literal_eval
+import io
+import uuid
+from pathlib import Path
+from typing import Any, Optional
+
+from django.conf import settings
+from PIL import Image
 
 
-def validate_image(file: Any) -> bool:
-    """
-    Validate an image file using Pillow (PIL).
+def chat_message_image_path(instance, filename: str) -> str:
+    ext = Path(filename).suffix.lower() or ".png"
+    return f"chat_images/branch_{instance.chat_branch_id}/{uuid.uuid4().hex}{ext}"
 
-    Args:
-        file (Any): The image file to validate, expected to be a binary stream.
 
-    Returns:
-        bool: True if the file is a valid image, False otherwise.
-    """
+def _max_image_size() -> int:
+    return settings.CHAT_MAX_IMAGE_SIZE_BYTES
+
+
+def get_validated_image_bytes(file: Any, max_size_bytes: Optional[int] = None) -> bytes:
+    max_size_bytes = max_size_bytes or _max_image_size()
+    file_size = getattr(file, "size", None)
+    if isinstance(file_size, int) and file_size > max_size_bytes:
+        raise ValueError(
+            f"Image file exceeds maximum allowed size ({max_size_bytes // (1024 * 1024)} MB)."
+        )
+    file.seek(0)
+    data = file.read(max_size_bytes + 1)
+    if len(data) > max_size_bytes:
+        raise ValueError(
+            f"Image file exceeds maximum allowed size ({max_size_bytes // (1024 * 1024)} MB)."
+        )
     try:
-        # Read the file content
+        with Image.open(io.BytesIO(data)) as img:
+            img.verify()
+    except (IOError, ValueError, Image.DecompressionBombError) as exc:
+        raise ValueError("The provided file is not a valid image.") from exc
+    return data
+
+
+def validate_image(file: Any, max_size_bytes: Optional[int] = None) -> bool:
+    try:
+        get_validated_image_bytes(file, max_size_bytes)
         file.seek(0)
-        image_data = file.read()
-
-        # Use Pillow to attempt opening and verifying the image
-        with Image.open(io.BytesIO(image_data)) as img:
-            img.verify()  # This raises an exception if the image is invalid
-
         return True
-    except (IOError, ValueError, Image.DecompressionBombError):
-        # Catch specific exceptions related to image processing
+    except ValueError:
+        file.seek(0)
         return False
 
 
-def image_to_base64(file: Any) -> str:
-    """
-    Convert a validated image file stream into a base64 encoded string.
-
-    Args:
-        file (Any): The image file stream that has been validated.
-
-    Returns:
-        str: The base64 encoded string of the image.
-
-    Raises:
-        ValueError: If the file is not a valid image or if conversion fails.
-    """
+def image_to_base64(file: Any, max_size_bytes: Optional[int] = None) -> str:
     try:
-        # Ensure the file is valid
-        if not validate_image(file):
-            raise ValueError("The provided file is not a valid image.")
-
-        # Read the file content for encoding
-        file.seek(0)
-        image_data = file.read()
-        base64_str = base64.b64encode(image_data).decode('utf-8')
-
-        return base64_str
-    except Exception as e:
-        raise ValueError(f"Failed to convert image to base64: {str(e)}") from e
+        data = get_validated_image_bytes(file, max_size_bytes)
+        return base64.b64encode(data).decode("utf-8")
+    except ValueError:
+        raise
+    except Exception as exc:
+        raise ValueError(f"Error processing image: {exc}") from exc
 
 
-def base64_to_image(base64_str: str) -> Image.Image:
-    """
-    Convert a base64 encoded string into an Pillow (PIL) Image object.
-
-    Args:
-        base64_str (str): The base64 encoded string representing the image.
-
-    Returns:
-        Image.Image: A PIL Image object of the decoded image.
-
-    Raises:
-        ValueError: If the input is not a valid base64 string or if decoding fails.
-    """
-    try:
-        # Decode the base64 string into bytes
-        decoded_image_bytes = base64.b64decode(base64_str)
-
-        # Open the image using Pillow's Image.open with BytesIO
-        img = Image.open(io.BytesIO(decoded_image_bytes))
-        mime_type = img.format.lower()
-
-        return f"data:{mime_type};base64,{literal_eval(base64_str)}"
-
-    except (base64.binascii.Error, IOError) as error:
-        raise ValueError(f"Invalid base64 data or unable to decode image: {str(error)}") from error
+def image_field_to_base64(image_field) -> str:
+    with image_field.open("rb") as handle:
+        return base64.b64encode(handle.read()).decode("utf-8")

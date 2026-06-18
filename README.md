@@ -1,10 +1,20 @@
 # Ollama WebHub
 
-## Django Chat Application with Ollama Integration
+Django chat application integrated with the [Ollama](https://ollama.com/) API. Users can create chat threads, pick AI models, send text and images, and manage chat history.
 
-A web-based chat application built with Django, integrated with the Ollama API for AI-powered responses. Users can create chat threads, interact with different AI models, and manage their chat history.
+## Features
 
-### Features
+- User authentication (login / register)
+- Create, edit, and delete chat threads (model, prompt, temperature, stream vs one-time response, etc.)
+- Ollama integration: model list, chat and generate modes, streaming (aggregated server-side)
+- Multimodal chats for vision models
+- Reasoning / thinking display for supported models
+- Markdown rendering with syntax highlighting
+- Real-time SSE streaming of assistant responses in the chat UI
+- Stop generation mid-stream
+- Edit user messages with automatic regeneration
+- Regenerate assistant or user messages
+- Prometheus metrics at `/metrics`
 
 - **User Authentication**: Secure login system for personalized chat experiences.
 - **Chat Management**:
@@ -24,94 +34,73 @@ A web-based chat application built with Django, integrated with the Ollama API f
 - **Message History**: Persistent storage of all user and AI messages.
 - **Ollama Status**: Display available models and Ollama server version.
 
-### Technologies
+- Django 5.2
+- SQLite (default)
+- Ollama API
+- Bootstrap 5
 
-- **Backend**: Django 5.x
-- **AI API**: [Ollama 0.9.x](https://ollama.com/)
-- **Database**: SQLite (default; can be configured for PostgreSQL/MySQL)
-- **Frontend**: Django Templates (Jinja)
-- **Dependencies**:
-  - `requests` for API communication
-  - `python-dotenv` for environment variables (recommended)
+## Prerequisites
 
-### Installation
-
-#### Prerequisites
 - Python 3.12+
-- Ollama 0.9.0 server running locally (see [Ollama Setup](#ollama-setup))
-- Django 5.x
+- Ollama server running locally or remotely
 
-#### Steps
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/django-ollama-chat.git
-   cd django-ollama-chat
-   
-2. Create and activate a virtual environment:
-    ```bash
-    python -m venv venv
-    source venv/bin/activate  # Linux/Mac
-    venv\Scripts\activate     # Windows
-   
-3. Install dependencies:
-    ```bash
-    pip install django requests python-dotenv
-   
-4. Configure environment variables (create .env file):
-    ```ini
-   OLLAMA_API_HOST=http://localhost:11434
-   SECRET_KEY=your-django-secret-key
-   
-5. Apply migrations:
-   ```bash
-   python manage.py migrate
-   
-6. Run the development server:
-   ```bash
-   python manage.py runserver
-   
-## Ollama Setup
+## Installation
 
-1. Install and run [Ollama](https://ollama.com/)
-2. Pull desired models (e.g.):
-   ```bash
-   ollama pull llama3
-   
-### Usage
-1. **Access the app**: Visit http://localhost:8000 in your browser.
-2. **Authenticate**: Log in or register a new account.
-3. **Create a Chat**:
-    * Click "New Chat"
-    * Select an AI model (e.g., llama3)
-    * Add optional name/description
-4. **Chat Interface**:
-    * Type messages in the input field
-    * View AI responses in real-time
-    * Use sidebar to switch between chats
-5. **Manage Chats**:
-    * Rename chats via the chat header
-    * Delete chats using the trash icon
-### Project Structure
+```bash
+git clone https://github.com/BTemplar/OllamaWebHub.git
+cd OllamaWebHub
+
+python -m venv .venv
+.venv\Scripts\activate        # Windows
+# source .venv/bin/activate   # Linux / macOS
+
+pip install -r requirements.txt
+cp .env.example .env            # then edit values
+python manage.py migrate
+python manage.py createsuperuser
+python manage.py runserver
+```
+
+Open http://localhost:8000
+
+## Configuration
+
+Copy `.env.example` to `.env`:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `SECRET_KEY` | Django secret key | dev placeholder |
+| `DEBUG` | Debug mode | `True` |
+| `ALLOWED_HOSTS` | Comma-separated hosts | `localhost,127.0.0.1` |
+| `OLLAMA_API_URL` | Ollama API base URL | `http://localhost:11434/api` |
+| `CHAT_MAX_CONTEXT_MESSAGES` | Messages sent to Ollama | `50` |
+| `CHAT_MAX_IMAGE_SIZE_BYTES` | Max upload size for chat images | `10485760` (10 MB) |
+| `CHAT_STREAM_RATE` | Rate limit for stream endpoint (per user) | `30/m` |
+| `OLLAMA_MODELS_CACHE_SECONDS` | Model list cache TTL | `60` |
+| `METRICS_ALLOWED_IPS` | IPs allowed to scrape metrics in production | `127.0.0.1` |
+
+## Ollama setup
+
+```bash
+ollama pull llama3
+ollama serve
+```
+
+## Project structure
+
 ```
 .
-├── account/               # Authentication app
-│   ├── views.py           # Authentication logic
-│   ├── forms.py           # Authentication forms
-│   ├── urls.py            # Authentication app url tracing
-├── ollama_app/            # Main app
-│   ├── models.py          # ChatBranch, ChatMessage models
-│   ├── views.py           # Core logic (provided)
-│   ├── ollama_api.py      # Ollama API wrapper
-│   ├── urls.py            # Main app url tracing
-├── templates/             # HTML templates
-├── OllamaWebHub/          # Django project config
-└── .env                   # Environment variables
+├── accounts/          # Authentication
+├── core/              # Django project settings
+├── ollama/            # Chat app, Ollama client, services
+├── templates/         # HTML templates
+├── static/            # Static assets
+├── .env.example       # Environment template
+└── manage.py
 ```
+
 ## License
-MIT License. More details in the file [LICENSE](LICENSE.txt).
 
----
+MIT — see [LICENSE.txt](LICENSE.txt).
 
-Author: Oleg Rud  
-GitHub: [@BTemplar](https://github.com/BTemplar)  
-Email: [templar@internet.ru](mailto:templar@cyberswarm.ru)  
+Author: Oleg Rud · GitHub: [@BTemplar](https://github.com/BTemplar)

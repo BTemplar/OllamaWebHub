@@ -1,0 +1,116 @@
+<div class="mb-3">
+  <label class="form-label">Chat label</label>
+  <input type="text"
+         name="name"
+         class="form-control"
+         required
+         placeholder="Enter chat label"
+         value="{{ branch.name|default:'' }}">
+</div>
+
+<div class="mb-3">
+  <label class="form-label">Chat description</label>
+  <input type="text"
+         name="description"
+         class="form-control"
+         placeholder="Enter chat description"
+         value="{{ branch.description|default:'' }}">
+</div>
+
+<div class="mb-3">
+  <label class="form-label">System prompt</label>
+  <textarea name="prompt"
+            class="form-control"
+            rows="3"
+            placeholder="Enter system prompt">{{ branch.prompt|default:'' }}</textarea>
+</div>
+
+<div class="mb-3">
+  <label class="form-label" for="{{ id_prefix }}Temperature">Temperature</label>
+  <span class="text-center" id="{{ id_prefix }}RangeValue">{{ branch.temperature|default:'0.7' }}</span>
+  <input type="range"
+         class="form-range"
+         min="0.2"
+         max="1.0"
+         step="0.1"
+         id="{{ id_prefix }}Temperature"
+         name="temperature"
+         value="{{ branch.temperature|default:'0.7' }}">
+</div>
+
+<div class="mb-3">
+  <label class="form-label" for="{{ id_prefix }}NumCtx">Token window size</label>
+  <span class="text-center" id="{{ id_prefix }}NumCtxValue">{{ branch.num_ctx|default:'2048' }}</span>
+  <input type="range"
+         class="form-range"
+         min="2000"
+         max="128000"
+         step="1000"
+         id="{{ id_prefix }}NumCtx"
+         name="num_ctx"
+         value="{{ branch.num_ctx|default:'2048' }}">
+</div>
+
+<div class="mb-3 form-check">
+  <input type="checkbox"
+         class="form-check-input"
+         id="{{ id_prefix }}MultimodalCheckbox"
+         name="multimodal"
+         value="True"
+         {% if branch.multimodal %}checked{% endif %}
+         disabled>
+  <label class="form-check-label" for="{{ id_prefix }}MultimodalCheckbox">Multimodal</label>
+</div>
+
+<div class="mb-3 form-check">
+  <input type="checkbox"
+         class="form-check-input"
+         id="{{ id_prefix }}ThinkCheckbox"
+         name="think"
+         value="True"
+         {% if branch.think %}checked{% endif %}
+         disabled>
+  <label class="form-check-label" for="{{ id_prefix }}ThinkCheckbox">Reasoning enabled</label>
+</div>
+
+<div class="mb-3 form-check">
+  <input type="checkbox"
+         class="form-check-input"
+         id="{{ id_prefix }}ReasoningCheckbox"
+         name="reasoning"
+         value="True"
+         {% if branch.reasoning %}checked{% endif %}
+         disabled>
+  <label class="form-check-label" for="{{ id_prefix }}ReasoningCheckbox">Show reasoning in UI</label>
+</div>
+
+<div class="mb-3">
+  <label class="form-label">Response delivery</label>
+  <select name="response_type" class="form-select">
+    <option value="ST" {% if not branch or branch.response_type == 'ST' %}selected{% endif %}>Stream (token-by-token)</option>
+    <option value="OT" {% if branch and branch.response_type == 'OT' %}selected{% endif %}>One-time (full response)</option>
+  </select>
+</div>
+
+<div class="mb-3">
+  <label class="form-label">Request mode</label>
+  <select name="request_type" class="form-select">
+    <option value="CH" {% if not branch or branch.request_type == 'CH' %}selected{% endif %}>Chat (multi-turn)</option>
+    <option value="RP" {% if branch and branch.request_type == 'RP' %}selected{% endif %}>Response (single prompt)</option>
+  </select>
+</div>
+
+<div class="mb-3">
+  <label class="form-label">Select model</label>
+  <select name="model" class="form-select chat-model-select" required id="{{ id_prefix }}ModelSelect">
+    {% if not branch %}
+    <option value="" disabled selected>Choose a model...</option>
+    {% endif %}
+    {% for model in models %}
+    <option value="{{ model }}"
+            {% if branch and branch.selected_model == model %}selected{% endif %}>
+      {{ model }}
+    </option>
+    {% endfor %}
+  </select>
+</div>

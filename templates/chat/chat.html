@@ -1,323 +1,10 @@
 {% extends "base.html" %}
-{% load custom_filters %}
 {% load markdown_filter %}
+{% load static %}
 
 {% block extra_css %}
-{% load static %}
 <link rel="stylesheet" href="{% static 'css/pygments.css' %}">
-<style>
-    
-    .chat-list {
-        max-height: calc(100vh - 150px);
-        overflow: hidden;
-    }
-    
-    .active-chat {
-        background: rgba(var(--bs-primary-rgb), 0.2) !important;
-        border-left: 3px solid var(--bs-primary) !important;
-    }
-
-    .message-content {
-        max-width: 100%;
-        word-wrap: break-word;
-    }
-
-    .bot-message .message-content {
-        background: rgba(var(--bs-info-rgb), 0.1) !important;
-    }
-
-    .user-message .message-content {
-        background: rgba(var(--bs-primary-rgb), 0.1) !important;
-    }
-    
-    .user-message {
-        margin-left: auto;
-        margin-right: 20px;
-        max-width: 70%;
-        border-radius: 15px 0 15px 15px;
-    }
-    
-    .bot-message {
-        margin-right: auto;
-        margin-left: 20px;
-        max-width: 70%;
-        border-radius: 0 15px 15px 15px;
-    }
-    
-    @media (max-width: 768px) {
-        .user-message, .bot-message {
-            max-width: 85%;
-            margin-left: 10px;
-            margin-right: 10px;
-        }
-    }
-
-    @media (max-width: 768px) {
-        .message-wrapper {
-            max-width: 90%;
-        }
-    }
-    @keyframes messageAppear {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-    }
-    
-    .message-wrapper {
-        transition: transform 0.3s ease-out;
-    }
-    
-    #messageInput:focus {
-    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-    border-color: #86b7fe;
-    }
-    
-    @media (max-width: 768px) {
-        .chat-messages-container {
-            height: calc(100vh - 160px);
-        }
-        
-        .message-wrapper {
-            max-width: 95%;
-            margin: 0 5px;
-        }
-    }
-    
-    @keyframes smooth-scroll {
-        from { scroll-margin-bottom: 0; }
-        to { scroll-margin-bottom: 100px; }
-    }
-    
-    .chat-messages-container {
-        overscroll-behavior: contain;
-        padding-bottom: 20px;
-    }
-    
-    .message-wrapper:last-child {
-        margin-bottom: 20px;
-    }
-    .message-content {
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    }
-    
-    .file-upload {
-    position: relative;
-    display: inline-block;
-    cursor: pointer;
-    }
-    
-    .file-upload input[type="file"] {
-        position: absolute;
-        left: 0;
-        top: 0;
-        opacity: 0;
-        width: 100%;
-        height: 100%;
-        cursor: pointer;
-    }
-    
-    .upload-icon {
-        width: 60px;
-        height: 60px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: background 0.3s;
-    }
-    
-    .upload-icon:hover {
-        background: #ffffff;
-    }
-    
-    .upload-icon img {
-        width: 32px;
-        height: 32px;
-    }
-    
-    .file-selected i {
-    color: #4CAF50 !important;
-    animation: pulse 0.5s;
-    }
-    
-    @keyframes pulse {
-        from { transform: scale(1); }
-        to { transform: scale(1.1); }
-    }
-    .message-thumbnail {
-    max-width: 150px;
-    height: auto;
-    border-radius: 8px;
-    margin-bottom: 8px;
-    }
-    
-    .markdown-content pre {
-        background: rgb(88, 59, 124);
-        padding: 15px;
-        border-radius: 5px;
-        overflow-x: auto;
-        margin: 1em 0;
-    }
-    
-    .markdown-content code {
-        background: rgb(88, 59, 124);
-        padding: 2px 5px;
-        border-radius: 3px;
-        font-family: 'Fira Code', monospace;
-    }
-    
-    .markdown-content h1, .markdown-content h2 {
-        border-bottom: 1px solid #ffffff;
-        padding-bottom: 0.3em;
-    }
-
-    .code-header {
-        color: white;
-        padding: 5px 15px;
-        border-radius: 5px 5px 0 0;
-        font-family: monospace;
-        font-size: 0.9em;
-        display: inline-block;
-        margin-top: 1em;
-    }
-    
-    .markdown-content table {
-        border-collapse: collapse;
-        margin: 1em 0;
-        width: 100%;
-    }
-    
-    .markdown-content th, 
-    .markdown-content td {
-        padding: 8px 12px;
-        border: 1px solid #ddd;
-    }
-    
-    .markdown-content th {
-        background-color: #583b7c;
-        font-weight: 600;
-    }
-    
-    .code-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        color: #0ddabb;
-        padding: 0px 15px;
-        border-radius: 5px 5px 0 0;
-        font-family: 'Fira Code', monospace;
-    }
-    
-    .code-actions {
-        display: flex;
-        gap: 10px;
-    }
-    
-    .copy-btn, .download-btn {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: #ffffff;
-        border-color: #667eea;
-        padding: 0px 10px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 0.85rem;
-        transition: background 0.2s;
-    }
-    
-    .copy-btn:hover, .download-btn:hover {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    }
-    
-    .code-block {
-        position: relative;
-    }
-    
-    .reasoning-item {
-        transition: all 0.3s ease;
-        border-left: 3px solid #0D6EFD;
-    }
-    
-    .reasoning-item:hover {
-        box-shadow: 0 0 5px rgba(13, 202, 240, 0.2);
-    }
-
-    .input-group.expanded textarea {
-        height: 250px;
-        font-size: 16px;
-    }
-    
-    .input-group.expanded .file-upload {
-        display: none;
-    }
-    
-    .expand-icon {
-        font-size: 1.2rem;
-        transition: transform 0.3s;
-    }
-    
-    .overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.7); /* Более темный фон */
-        z-index: 999;
-        display: none;
-    }
-    
-    .input-group.expanded {
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 90%;
-        max-width: 800px;
-        z-index: 1000;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0 5px 30px rgba(0, 0, 0, 0.3);
-    }
-    
-    .input-group.expanded textarea {
-        height: 300px;
-        font-size: 16px;
-        background-color: #212529;
-        color: #dee2e6 !important;
-    }
-    
-    .input-group.expanded .file-upload {
-        display: none;
-    }
-    
-    body.modal-open {
-        overflow: hidden;
-    }
-    
-    #expand-toggle {
-        color: white;
-        z-index: 1;
-    }
-    
-    .input-group.expanded #expand-toggle {
-        position: absolute;
-        top: 22px;
-        right: 105px;
-        z-index: 1001;
-        color: white !important;
-        width: 36px;
-        height: 36px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.2s;
-    }
-</style>
+<link rel="stylesheet" href="{% static 'css/chat.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -342,7 +29,7 @@
                                 <small class="text-muted">{{ branch.description|truncatechars:20 }}</small>
                                 {% endif %}
                             </div>
-                            <span class="badge bg-primary rounded-pill">{{ branch.chatmessage_set.count }}</span>
+                            <span class="badge bg-primary rounded-pill">{{ branch.message_count }}</span>
                         </div>
                     </a>
                     {% empty %}
@@ -372,8 +59,8 @@
                             <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#deleteMessagesModal">
                                 <i class="bi-arrow-counterclockwise"></i> Clear messages
                             </a></li>
-                            <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#renameChatModal">
-                                <i class="bi-pencil"></i> Rename
+                            <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#editChatModal">
+                                <i class="bi-gear"></i> Edit chat
                             </a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#deleteChatModal">
@@ -386,56 +73,68 @@
                 <!-- Messages -->
                 <div class="chat-messages-container flex-grow-1 overflow-auto mb-4" id="chat-messages">
                     {% for msg in messages %}
-                    <div class="message-wrapper {% if msg.sender == 'user' %}user-message{% else %}bot-message{% endif %} mb-3">
+                    <div class="message-wrapper {% if msg.sender == 'user' %}user-message{% else %}bot-message{% endif %} mb-3"
+                         data-message-id="{{ msg.id }}"
+                         data-sender="{{ msg.sender }}">
                         <div class="message-content p-3 rounded">
-                            {% if msg.sender == 'user' and msg.image_base64 %}
-                                <!-- Thumbnail image -->
-                                <img src="{{ msg.image_base64|base64_to_image | cut:"'"|cut:"["|cut:"]" }}" 
-                                     class="message-thumbnail" 
-                                     alt="Загруженное изображение" />
+                            {% if msg.sender == 'user' and msg.image %}
+                                <img src="{{ msg.image.url }}"
+                                     class="message-thumbnail"
+                                     alt="Uploaded image" />
                             {% endif %}
-                            <!-- Header with sender -->
-                            <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div class="d-flex justify-content-between align-items-start mb-2 gap-2">
                                 <strong>
                                     {% if msg.sender == 'user' %}
                                     <i class="bi-person me-2"></i>{{ request.user.username|title }}
+                                    {% elif msg.sender == 'system' %}
+                                    <i class="bi-exclamation-triangle me-2"></i>System
                                     {% else %}
                                     <i class="bi-robot me-2"></i>Assistant
                                     {% endif %}
                                 </strong>
-                                {% if msg.timestamp.date == today %}
-                                    <small class="text-muted">today {{ msg.timestamp|time:"H:i" }}</small>
-                                {% else %}
-                                    <small class="text-muted">{{ msg.timestamp|date:"d.m.Y H:i" }}</small>
-                                {% endif %}
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="message-actions btn-group btn-group-sm">
+                                        {% if msg.sender == 'user' %}
+                                        <button type="button" class="btn btn-outline-light btn-edit-message" title="Edit & regenerate">
+                                            <i class="bi-pencil"></i>
+                                        </button>
+                                        {% endif %}
+                                        {% if msg.sender == 'user' or msg.sender == 'assistant' %}
+                                        <button type="button" class="btn btn-outline-light btn-regenerate-message" title="Regenerate">
+                                            <i class="bi-arrow-clockwise"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                    {% if msg.timestamp.date == today %}
+                                        <small class="text-muted message-time">today {{ msg.timestamp|time:"H:i" }}</small>
+                                    {% else %}
+                                        <small class="text-muted message-time">{{ msg.timestamp|date:"d.m.Y H:i" }}</small>
+                                    {% endif %}
+                                </div>
                             </div>
-                            
-                            <!-- Message text -->
-                            <div class="message-text">
-                                {% if selected_branch.reasoning == 1 %}
+
+                            <div class="message-body">
+                                <div class="message-text">
+                                    {% if selected_branch.reasoning and msg.sender == 'assistant' and msg.think %}
                                     <div class="think-spoiler mb-2">
-                                        <!-- Spoiler toggle button -->
-                                        {% if msg.sender == 'assistant' %}
-                                        <a class="d-flex align-items-center spoiler-toggle text-decoration-none" 
-                                           data-bs-toggle="collapse" 
+                                        <a class="d-flex align-items-center spoiler-toggle text-decoration-none"
+                                           data-bs-toggle="collapse"
                                            href="#think-{{ msg.id }}-{{ forloop.counter }}"
                                            role="button"
                                            aria-expanded="false">
                                             <i class="bi bi-chevron-right toggle-icon me-2" style="color: #0ddabb;"></i>
                                             <span class="small fw-medium" style="color: #0ddabb;">Show model reasoning</span>
                                         </a>
-                                        {% endif %}    
-                                        
-                                        <!-- Collapsible think content -->
                                         <div class="collapse mt-1" id="think-{{ msg.id }}-{{ forloop.counter }}">
                                             <div class="reasoning-content p-2 bg-info-subtle rounded">
                                                 <i class="bi bi-lightbulb me-2" style="color: #0D6EFD;"></i>
-                                                <span class="text-muted">{{ msg.think|markdown }}</span>
+                                                <div class="text-muted think-markdown">{{ msg.think|markdown }}</div>
                                             </div>
                                         </div>
                                     </div>
-                                {% endif %}
-                                {{ msg.message|markdown }}
+                                    {% endif %}
+                                    <div class="content-markdown">{{ msg.message|markdown }}</div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -445,8 +144,11 @@
             <!-- Send message form -->
             <div class="mt-auto">
                 <div id="overlay" class="overlay" style="display: none;"></div>
-                <form id="message-form" method="POST" enctype="multipart/form-data" 
-                      action="{% url 'chat_detail' selected_branch.id %}">
+                <form id="message-form" method="POST" enctype="multipart/form-data"
+                      action="{% url 'chat_stream' selected_branch.id %}"
+                      data-stream-url="{% url 'chat_stream' selected_branch.id %}"
+                      data-username="{{ request.user.username|escapejs }}"
+                      data-show-reasoning="{% if selected_branch.reasoning %}true{% else %}false{% endif %}">
                     {% csrf_token %}
                     <div class="input-group">
                         {% if selected_branch.multimodal %}
@@ -465,11 +167,13 @@
                                   class="form-control"
                                   placeholder="Enter your message here..."
                                   rows="2"
-                                  style="resize: none"
-                                  required></textarea>
+                                  style="resize: none"></textarea>
                         
-                        <button type="submit" class="btn btn-primary gradient-bg-btn">
-                            <i class="bi-send"></i> Send 
+                        <button type="submit" id="send-button" class="btn btn-primary gradient-bg-btn">
+                            <i class="bi-send"></i> Send
+                        </button>
+                        <button type="button" id="stop-button" class="btn btn-danger" style="display: none;">
+                            <i class="bi-stop-fill"></i> Stop
                         </button>
                     </div>
                 </form>
@@ -496,204 +200,9 @@
 {% endblock %}
 
 {% block extra_js %}
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const messagesContainer = document.querySelector('.chat-messages-container');
-        const chatContainer = document.querySelector('.chat-list');
-        const textarea = document.querySelector('textarea[name="message"]');
-        const form = document.querySelector('#message-form');
-        const submitButton = form.querySelector('button[type="submit"]');
-        const expandToggle = document.getElementById('expand-toggle');
-        const overlay = document.getElementById('overlay');
-        const inputGroup = document.querySelector('.input-group');
-        const textareaContainer = document.querySelector('.textarea-container');
-    
-        // expansion mode switching function
-        function toggleExpandMode() {
-            inputGroup.classList.toggle('expanded');
-            overlay.style.display = inputGroup.classList.contains('expanded') ? 'block' : 'none';
-            
-            const icon = expandToggle.querySelector('i');
-            icon.classList.toggle('bi-arrows-fullscreen');
-            icon.classList.toggle('bi-fullscreen-exit');
-            
-            if (inputGroup.classList.contains('expanded')) {
-                // Move the button to the textarea container
-                textareaContainer.appendChild(expandToggle);
-                textarea.focus();
-                document.body.classList.add('modal-open');
-            } else {
-                // Return the button to its original place
-                const textarea = textareaContainer.querySelector('textarea');
-                textareaContainer.insertBefore(expandToggle, textarea.nextSibling);
-                document.body.classList.remove('modal-open');
-            }
-        }
-    
-        // Event Handlers
-        expandToggle.addEventListener('click', toggleExpandMode);
-        overlay.addEventListener('click', toggleExpandMode);
-    
-        // Close by ESC
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && inputGroup.classList.contains('expanded')) {
-                toggleExpandMode();
-            }
-        });
-    
-        function setLoadingState(isLoading) {
-            textarea.disabled = isLoading;
-            submitButton.disabled = isLoading;
-            expandToggle.disabled = isLoading;
-            submitButton.innerHTML = isLoading 
-                ? '<div class="spinner-border spinner-border-sm" role="status"></div> Wait...'
-                : '<i class="bi-send"></i> Send';
-        }
-    
-        async function handleSubmit(e) {
-            e.preventDefault();
-    
-            const formData = new FormData(form);
-            const message = formData.get('message').trim();
-    
-            if (!message) return;
-    
-            setLoadingState(true);
-    
-            try {
-                const response = await fetch(form.action, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': form.querySelector('[name=csrfmiddlewaretoken]').value,
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    body: formData
-                });
-    
-                if (!response.ok) throw new Error('Network error');
-    
-                const data = await response.json();
-    
-                if (data.user_message) {
-                    addMessageToChat(data.user_message);
-                }
-                if (data.bot_message) {
-                    addMessageToChat(data.bot_message);
-                }
-    
-                textarea.value = '';
-                scrollToBottom();
-    
-            } catch (error) {
-                console.error('Error:', error);
-            } finally {
-                setLoadingState(false);
-                location.reload();
-            }
-        }
-    
-        function addMessageToChat(message) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message-wrapper ${message.sender}-message mb-3`;
-            messageDiv.innerHTML = `
-                <div class="message-content p-3 rounded">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <strong>${message.sender === 'user' ? '<i class="bi-person me-2"></i>You' : '<i class="bi-robot me-2"></i>Assistant'}</strong>
-                        <small class="text-muted">${new Date(message.timestamp).toLocaleTimeString()}</small>
-                    </div>
-                    <div class="message-text">${message.text}</div>
-                </div>
-            `;
-            messagesContainer.appendChild(messageDiv);
-        }
-        
-        function scrollToBottom() {
-            if(messagesContainer) {
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            } else if (chatContainer) {
-                chatContainer.scrollTop = chatContainer.scrollHeight;
-            }
-        }
-    
-        scrollToBottom();
-    
-        if (form) {
-            form.addEventListener('submit', handleSubmit);
-    
-            textarea.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSubmit(e);
-                }
-            });
-        }
-    });
-    </script>
-    
-    <script>
-    document.getElementById('fileInput').addEventListener('change', function(e) {
-        const icon = this.closest('.file-upload').querySelector('i');
-        if (this.files.length > 0) {
-            icon.parentElement.classList.add('file-selected');
-        } else {
-            icon.parentElement.classList.remove('file-selected');
-        }
-    });
-    </script>
-    
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        document.body.addEventListener('click', function(e) {
-            // Copy processing
-            if (e.target.classList.contains('copy-btn')) {
-                const button = e.target;
-                const targetId = button.getAttribute('data-clipboard-target');
-                const targetElement = document.querySelector(targetId);
-                const textToCopy = targetElement.querySelector('pre').innerText;
-                const originalText = button.getAttribute('data-original-text') || button.innerText;
-                
-                if (!button.getAttribute('data-original-text')) {
-                    button.setAttribute('data-original-text', originalText);
-                }
-                
-                navigator.clipboard.writeText(textToCopy).then(() => {
-                    button.innerText = 'Copied!';
-                    setTimeout(() => {
-                        button.innerText = originalText;
-                    }, 2000);
-                });
-            }
-            
-            // Download processing
-            if (e.target.classList.contains('download-btn')) {
-                const button = e.target;
-                const targetId = button.getAttribute('data-target');
-                const lang = button.getAttribute('data-lang');
-                const targetElement = document.querySelector(targetId);
-                const codeContent = targetElement.querySelector('pre').innerText;
-                
-                // Defining a file name in a language
-                let filename = 'code.txt';
-                if (lang === 'python') filename = 'script.py';
-                else if (lang === 'java') filename = 'Main.java';
-                else if (lang === 'javascript' || lang === 'js') filename = 'script.js';
-                else if (lang === 'html') filename = 'page.html';
-                else if (lang === 'css') filename = 'styles.css';
-                else if (lang === 'cpp') filename = 'program.cpp';
-                else if (lang === 'go') filename = 'main.go';
-                
-                const blob = new Blob([codeContent], { type: 'text/plain' });
-                const url = URL.createObjectURL(blob);
-                
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = filename;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-            }
-        });
-    });
-    </script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="{% static 'js/chat.js' %}?v=3"></script>
+<script src="{% static 'js/chat-file-upload.js' %}"></script>
+<script src="{% static 'js/chat-code-actions.js' %}"></script>
+<script src="{% static 'js/chat-modals.js' %}"></script>
 {% endblock %}
