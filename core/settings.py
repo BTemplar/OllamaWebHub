@@ -30,6 +30,15 @@ ALLOWED_HOSTS = [
     if host.strip()
 ]
 
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv(
+        "CSRF_TRUSTED_ORIGINS",
+        "http://localhost,http://127.0.0.1",
+    ).split(",")
+    if origin.strip()
+]
+
 LOGIN_URL = "/login/"
 LOGOUT_REDIRECT_URL = "/"
 

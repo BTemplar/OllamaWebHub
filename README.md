@@ -92,6 +92,7 @@ Copy `.env.example` to `.env` and adjust as needed:
 | `SECRET_KEY` | Django secret key | dev placeholder |
 | `DEBUG` | Debug mode | `True` |
 | `ALLOWED_HOSTS` | Comma-separated hosts | `localhost,127.0.0.1` |
+| `CSRF_TRUSTED_ORIGINS` | Comma-separated origins (scheme required, e.g. `https://example.com`) | `http://localhost,http://127.0.0.1` |
 | `REGISTRATION_ENABLED` | Allow public user sign-up | `True` |
 | `OLLAMA_API_URL` | Ollama API base URL | `http://localhost:11434/api` |
 | `CHAT_MAX_CONTEXT_MESSAGES` | Max messages sent to Ollama per request | `50` |
@@ -100,7 +101,7 @@ Copy `.env.example` to `.env` and adjust as needed:
 | `OLLAMA_MODELS_CACHE_SECONDS` | TTL for cached model list and Ollama status | `60` |
 | `METRICS_ALLOWED_IPS` | IPs allowed to scrape `/metrics` when `DEBUG=False` | `127.0.0.1` |
 
-When `DEBUG=False`, set a strong `SECRET_KEY`, configure `ALLOWED_HOSTS`, and restrict `METRICS_ALLOWED_IPS` to your Prometheus scraper. With an empty `METRICS_ALLOWED_IPS` list, metrics remain open only while `DEBUG=True`.
+When `DEBUG=False`, set a strong `SECRET_KEY`, configure `ALLOWED_HOSTS` and `CSRF_TRUSTED_ORIGINS` (include `https://` for your public domain), and restrict `METRICS_ALLOWED_IPS` to your Prometheus scraper. With an empty `METRICS_ALLOWED_IPS` list, metrics remain open only while `DEBUG=True`.
 
 ## Ollama setup
 
